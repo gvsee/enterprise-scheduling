@@ -1,0 +1,1346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HealthOS — Scheduling Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#F7F6F3;--surface:#fff;--border:#E4E2DC;--border2:#D0CEC6;
+  --text:#1A1916;--text2:#6B6860;--text3:#A8A69E;
+  --green:#1D9E75;--gl:#E1F5EE;--gm:#9FE1CB;
+  --amber:#BA7517;--al:#FAEEDA;
+  --blue:#185FA5;--bl:#E6F1FB;
+  --red:#A32D2D;--rl:#FCEBEB;
+  --purple:#534AB7;--pl:#EEEDFE;
+  --teal:#0E7490;--tl:#CFFAFE;
+  --r:8px;--rlg:12px;
+}
+html,body{height:100%;overflow:hidden;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);font-size:13px;}
+.shell{display:grid;grid-template-columns:210px 1fr;height:100vh;}
+
+/* ── Sidebar ── */
+.nav{background:var(--text);display:flex;flex-direction:column;overflow-y:auto;}
+.nav-logo{padding:16px 14px 12px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.nav-logo-text{font-size:13px;font-weight:600;color:#fff;}
+.nav-logo-sub{font-size:10px;color:rgba(255,255,255,0.3);margin-top:1px;font-family:'DM Mono',monospace;}
+.nav-section{padding:12px 10px 4px;font-size:9px;font-weight:600;color:rgba(255,255,255,0.22);letter-spacing:0.1em;text-transform:uppercase;}
+.nav-item{display:flex;align-items:center;gap:8px;padding:7px 10px;margin:1px 6px;border-radius:6px;font-size:12px;font-weight:500;color:rgba(255,255,255,0.5);cursor:pointer;transition:all .15s;}
+.nav-item:hover{background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.8);}
+.nav-item.active{background:var(--green);color:#fff;}
+.nav-item svg{width:13px;height:13px;flex-shrink:0;}
+.nav-badge{margin-left:auto;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:10px;}
+.nav-badge.amber{background:var(--amber);}
+.nav-divider{height:1px;background:rgba(255,255,255,0.08);margin:6px 10px;}
+
+/* on-call alert in sidebar */
+.oncall-alert{margin:6px;background:rgba(186,117,23,0.15);border:1px solid rgba(186,117,23,0.3);border-radius:6px;padding:8px 10px;cursor:pointer;}
+.oncall-alert:hover{background:rgba(186,117,23,0.22);}
+.oca-title{font-size:11px;font-weight:600;color:#F5C57A;display:flex;align-items:center;gap:5px;}
+.oca-sub{font-size:10px;color:rgba(245,197,122,0.7);margin-top:2px;}
+.pulse{width:7px;height:7px;border-radius:50%;background:#F5C57A;animation:pulse 1.6s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
+
+/* ── Main ── */
+.main{display:flex;flex-direction:column;overflow:hidden;}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;height:50px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.tab-bar{display:flex;gap:2px;}
+.tab{padding:5px 12px;border-radius:6px;font-size:12px;font-weight:500;color:var(--text2);cursor:pointer;transition:all .15s;}
+.tab:hover{background:var(--bg);}
+.tab.active{background:var(--green);color:#fff;}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:var(--r);font-size:11px;font-weight:500;cursor:pointer;border:none;font-family:inherit;transition:all .15s;}
+.btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--text2);}
+.btn-ghost:hover{background:var(--bg);}
+.btn-primary{background:var(--green);color:#fff;}
+.btn-primary:hover{background:#0F6E56;}
+.btn-amber{background:var(--amber);color:#fff;}
+.btn-amber:hover{background:#8A5410;}
+
+.content{flex:1;overflow-y:auto;padding:20px;}
+.tab-content{display:none;}
+.tab-content.active{display:block;}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--rlg);overflow:hidden;margin-bottom:14px;}
+.ph{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.pt{font-size:13px;font-weight:600;color:var(--text);}
+.ps{font-size:11px;color:var(--text3);margin-top:1px;}
+.pb{padding:16px;}
+.badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:500;padding:2px 7px;border-radius:20px;}
+.bg-green{background:var(--gl);color:#0F6E56;}
+.bg-amber{background:var(--al);color:var(--amber);}
+.bg-blue{background:var(--bl);color:var(--blue);}
+.bg-red{background:var(--rl);color:var(--red);}
+.bg-purple{background:var(--pl);color:var(--purple);}
+.bg-teal{background:var(--tl);color:var(--teal);}
+
+/* Stats */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rlg);padding:12px 14px;}
+.sl{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:3px;}
+.sv{font-size:22px;font-weight:600;color:var(--text);line-height:1;}
+.ss{font-size:10px;color:var(--text3);margin-top:2px;}
+.sd{font-size:10px;font-weight:600;padding:1px 5px;border-radius:3px;display:inline-block;margin-top:3px;}
+.du{background:var(--gl);color:var(--green);}
+.dd{background:var(--rl);color:var(--red);}
+.dw{background:var(--al);color:var(--amber);}
+
+/* Overview layout */
+.week-nav{display:flex;align-items:center;gap:8px;}
+.week-label{font-size:13px;font-weight:600;color:var(--text);min-width:170px;text-align:center;}
+.nav-btn{width:26px;height:26px;border-radius:6px;border:1px solid var(--border2);background:var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);}
+.nav-btn:hover{background:var(--bg);}
+.today-btn{padding:4px 10px;border-radius:6px;border:1px solid var(--border2);background:var(--surface);font-size:11px;font-weight:500;color:var(--text2);cursor:pointer;font-family:inherit;}
+.today-btn:hover{background:var(--bg);}
+.today-btn.current-week{border-color:var(--green);color:var(--green);background:var(--gl);}
+
+/* Chart */
+.cvd-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
+.cvd-day{border:1px solid var(--border);border-radius:var(--r);padding:9px 8px;cursor:pointer;transition:all .18s;background:var(--surface);position:relative;}
+.cvd-day:hover:not(.off){border-color:var(--blue);box-shadow:0 0 0 2px rgba(24,95,165,0.12);}
+.cvd-day.selected{border-color:var(--blue);box-shadow:0 0 0 3px rgba(24,95,165,0.18);}
+.cvd-day.warn{border-color:#EF9F27;background:#FFFDF7;}
+.cvd-day.crit{border-color:#E24B4A;background:#FFF9F9;}
+.cvd-day.good{border-color:var(--green);background:#FAFFFD;}
+.cvd-day.surplus{border-color:var(--blue);background:#F0F6FF;}
+.cvd-day.off{background:var(--bg);cursor:default;}
+.cvd-dname{font-size:9px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;}
+.cvd-date{font-size:14px;font-weight:600;color:var(--text);margin-bottom:5px;}
+.cvd-day.today-marker .cvd-date{color:var(--blue);}
+.cvd-bar-wrap{height:44px;display:flex;align-items:flex-end;gap:2px;margin-bottom:4px;}
+.cvd-bar{border-radius:2px 2px 0 0;width:100%;}
+.bar-supply{background:#B5D4F4;}
+.bar-demand{background:var(--green);}
+.bar-over{background:#E24B4A;}
+.bar-surplus{background:var(--blue);}
+.cvd-nums{font-size:9px;color:var(--text2);}
+.cvd-alert{font-size:9px;font-weight:600;padding:2px 5px;border-radius:3px;margin-top:4px;display:inline-block;}
+.click-hint{position:absolute;bottom:5px;right:5px;font-size:8px;color:var(--text3);opacity:0;transition:opacity .15s;}
+.cvd-day:hover:not(.off) .click-hint{opacity:1;}
+
+/* Overview drawer */
+.ov-main{flex:1;overflow:hidden;display:grid;grid-template-columns:1fr;transition:grid-template-columns .3s;}
+.ov-main.drawer-open{grid-template-columns:1fr 380px;}
+.ov-left{overflow-y:auto;padding:20px;}
+.ov-right{border-left:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;overflow:hidden;transform:translateX(100%);transition:transform .3s;}
+.ov-main.drawer-open .ov-right{transform:translateX(0);}
+.drawer-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.drawer-title{font-size:13px;font-weight:600;}
+.drawer-sub{font-size:11px;color:var(--text3);margin-top:1px;}
+.close-btn{width:24px;height:24px;border-radius:5px;border:1px solid var(--border);background:var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:13px;}
+.close-btn:hover{background:var(--bg);}
+.drawer-body{flex:1;overflow-y:auto;padding:14px;}
+.ds-title{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;margin-top:14px;}
+.ds-title:first-child{margin-top:0;}
+.breakdown-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);}
+.breakdown-row:last-child{border-bottom:none;}
+.br-left{display:flex;align-items:center;gap:6px;font-size:12px;}
+.br-dot{width:7px;height:7px;border-radius:2px;flex-shrink:0;}
+.br-right{display:flex;flex-direction:column;align-items:flex-end;gap:2px;}
+.br-nums{font-size:10px;color:var(--text3);}
+.mini-bar-wrap{height:3px;background:var(--border);border-radius:2px;overflow:hidden;width:50px;}
+.mini-bar{height:100%;border-radius:2px;}
+.br-gap{font-size:11px;font-weight:600;}
+.gap-neg{color:var(--red);}
+.gap-pos{color:var(--green);}
+.gap-blue{color:var(--blue);}
+.action-card{border:1px solid var(--border);border-radius:var(--r);padding:11px;margin-bottom:7px;transition:all .15s;}
+.action-card:last-child{margin-bottom:0;}
+.action-card:hover{border-color:var(--green);background:#FAFFFD;}
+.ac-provider{display:flex;align-items:center;gap:7px;margin-bottom:3px;}
+.ac-name{font-size:12px;font-weight:500;}
+.ac-meta{font-size:11px;color:var(--text3);line-height:1.4;margin-bottom:5px;}
+.ac-impact{font-size:10px;font-weight:600;background:var(--gl);color:var(--green);padding:1px 6px;border-radius:3px;display:inline-block;margin-bottom:6px;}
+.ac-impact.blue{background:var(--bl);color:var(--blue);}
+.ac-actions{display:flex;gap:5px;flex-wrap:wrap;}
+.btn-xs{padding:4px 9px;font-size:11px;border-radius:5px;cursor:pointer;border:none;font-family:inherit;font-weight:500;transition:all .15s;}
+.bxg{background:var(--gl);color:var(--green);}
+.bxg:hover{background:var(--gm);}
+.bxb{background:var(--bl);color:var(--blue);}
+.bxb:hover{background:#B5D4F4;}
+.bxo{background:var(--al);color:var(--amber);}
+.bxo:hover{background:#EDCB9A;}
+.bxr{background:var(--rl);color:var(--red);}
+
+/* Surplus panel */
+.surplus-card{border:1px solid var(--blue);border-radius:var(--r);padding:11px;margin-bottom:7px;background:#F0F6FF;transition:all .15s;}
+.surplus-card:hover{background:#E6F1FB;}
+.surplus-action-title{font-size:12px;font-weight:600;color:var(--blue);margin-bottom:3px;}
+.surplus-action-desc{font-size:11px;color:var(--text2);margin-bottom:6px;}
+
+/* ── TEMPLATES TAB ── */
+.tmpl-layout{display:grid;grid-template-columns:260px 1fr;gap:16px;align-items:start;}
+.tmpl-list{display:flex;flex-direction:column;gap:5px;}
+.tmpl-item{border:1px solid var(--border);border-radius:var(--r);padding:11px;cursor:pointer;transition:all .18s;background:var(--surface);}
+.tmpl-item:hover{border-color:var(--green);}
+.tmpl-item.active{border-color:var(--green);box-shadow:0 0 0 3px rgba(29,158,117,0.12);background:#FAFFFD;}
+.tmpl-item-name{font-size:12px;font-weight:600;color:var(--text);margin:5px 0 3px;}
+.tmpl-item-desc{font-size:11px;color:var(--text3);line-height:1.4;margin-bottom:5px;}
+.tmpl-providers-count{font-size:10px;color:var(--text3);padding-top:5px;border-top:1px solid var(--border);}
+.tmpl-providers-count span{font-weight:500;color:var(--text2);}
+.add-tmpl-btn{border:1px dashed var(--border2);border-radius:var(--r);padding:11px;cursor:pointer;transition:all .18s;background:var(--bg);display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;color:var(--text3);font-weight:500;margin-top:5px;}
+.add-tmpl-btn:hover{border-color:var(--green);color:var(--green);background:var(--gl);}
+.tmpl-detail{background:var(--surface);border:1px solid var(--border);border-radius:var(--rlg);overflow:hidden;}
+.tmpl-detail-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
+.tdh-name{font-size:15px;font-weight:600;color:var(--text);margin-bottom:4px;}
+.tdh-meta{display:flex;gap:5px;flex-wrap:wrap;}
+.tmpl-detail-body{display:grid;grid-template-columns:1fr 1fr;gap:0;}
+.tdb-left{padding:14px 16px;border-right:1px solid var(--border);}
+.tdb-right{padding:14px 16px;}
+.tdb-title{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;margin-top:14px;}
+.tdb-title:first-child{margin-top:0;}
+.config-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px;}
+.config-row:last-child{border-bottom:none;}
+.config-label{color:var(--text2);font-weight:500;}
+.config-val{color:var(--text);font-weight:500;text-align:right;}
+.day-pills{display:flex;gap:3px;}
+.day-pill{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;border:1px solid var(--border);background:var(--bg);color:var(--text3);}
+.day-pill.on{background:var(--green);border-color:var(--green);color:#fff;}
+.pa-row{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r);margin-bottom:5px;transition:all .15s;}
+.pa-row:last-child{margin-bottom:0;}
+.pa-row:hover{background:var(--bg);}
+.pa-row.assigned{background:var(--gl);border-color:var(--gm);}
+.pa-left{display:flex;align-items:center;gap:7px;}
+.pa-right{display:flex;align-items:center;gap:6px;}
+
+/* Location tag */
+.loc-tag{font-size:10px;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:1px 6px;color:var(--text2);display:inline-flex;align-items:center;gap:3px;}
+
+/* ── PROVIDERS TAB ── */
+.ptable{width:100%;border-collapse:collapse;}
+.ptable th{text-align:left;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;padding:8px 12px;border-bottom:1px solid var(--border);}
+.ptable td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.ptable tr:last-child td{border-bottom:none;}
+.ptable tr.clickable:hover td{background:var(--bg);cursor:pointer;}
+.pnc{display:flex;align-items:center;gap:7px;}
+.pn{font-size:12px;font-weight:500;color:var(--text);}
+.psp{font-size:10px;color:var(--text3);}
+.util-cell{display:flex;align-items:center;gap:7px;}
+.util-bar-wrap{width:50px;height:4px;background:var(--border);border-radius:2px;overflow:hidden;}
+.util-bar{height:100%;border-radius:2px;}
+.state-pills{display:flex;gap:3px;flex-wrap:wrap;}
+.state-pill{font-size:9px;background:var(--bl);color:var(--blue);border-radius:3px;padding:1px 5px;font-weight:600;}
+
+/* provider drawer */
+.prov-drawer-main{flex:1;overflow:hidden;display:grid;grid-template-columns:1fr;transition:grid-template-columns .3s;}
+.prov-drawer-main.drawer-open{grid-template-columns:1fr 400px;}
+.prov-left{overflow-y:auto;padding:20px;}
+.prov-right{border-left:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;overflow:hidden;transform:translateX(100%);transition:transform .3s;}
+.prov-drawer-main.drawer-open .prov-right{transform:translateX(0);}
+
+/* Schedule mini-grid */
+.mini-schedule{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-bottom:10px;}
+.ms-day{border:1px solid var(--border);border-radius:5px;padding:6px 5px;}
+.ms-day-name{font-size:9px;font-weight:600;color:var(--text3);text-transform:uppercase;text-align:center;margin-bottom:4px;}
+.ms-slot{font-size:9px;border-radius:3px;padding:2px 4px;margin-bottom:2px;line-height:1.3;}
+
+/* Block-off */
+.block-row{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:var(--rl);border:1px solid #E24B4A;border-radius:var(--r);margin-bottom:5px;font-size:11px;color:var(--red);}
+
+/* Shift chips */
+.shift-chip{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:3px 8px;border-radius:20px;margin-right:4px;margin-bottom:3px;}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:200;opacity:0;pointer-events:none;transition:opacity .2s;}
+.modal-overlay.visible{opacity:1;pointer-events:all;}
+.modal{background:var(--surface);border-radius:var(--rlg);width:560px;max-width:94vw;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;transform:translateY(12px);transition:transform .2s;box-shadow:0 8px 40px rgba(0,0,0,0.14);}
+.modal-overlay.visible .modal{transform:translateY(0);}
+.modal-sm{width:440px;}
+.modal-lg{width:680px;}
+.modal-header{padding:18px 20px 14px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.modal-title{font-size:15px;font-weight:600;color:var(--text);}
+.modal-sub{font-size:12px;color:var(--text2);margin-top:3px;line-height:1.5;}
+
+/* Stepper */
+.stepper{display:flex;align-items:center;margin-top:12px;}
+.step-item{display:flex;align-items:center;gap:5px;flex:1;}
+.step-item:last-child{flex:none;}
+.step-num{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;border:1.5px solid var(--border2);color:var(--text3);background:var(--surface);flex-shrink:0;transition:all .2s;}
+.step-item.done .step-num{background:var(--green);border-color:var(--green);color:#fff;}
+.step-item.active .step-num{background:var(--text);border-color:var(--text);color:#fff;}
+.step-lbl{font-size:10px;font-weight:500;color:var(--text3);transition:color .2s;}
+.step-item.active .step-lbl{color:var(--text);}
+.step-item.done .step-lbl{color:var(--green);}
+.step-line{flex:1;height:1px;background:var(--border);margin:0 4px;}
+.step-line.done{background:var(--green);}
+
+.modal-body{flex:1;overflow-y:auto;padding:18px 20px;}
+.step-pane{display:none;}
+.step-pane.active{display:block;}
+.field-label{font-size:11px;font-weight:500;color:var(--text2);margin-bottom:5px;}
+.field-hint{font-size:10px;color:var(--text3);margin-bottom:5px;margin-top:-3px;}
+.field-row{margin-bottom:13px;}
+.half{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.third{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+select,input[type=text],input[type=number],textarea{font-family:inherit;font-size:12px;color:var(--text);background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;outline:none;width:100%;}
+select:focus,input:focus,textarea:focus{border-color:var(--green);}
+textarea{resize:vertical;min-height:70px;}
+
+.day-selector{display:flex;gap:5px;margin-bottom:13px;}
+.day-sel-btn{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;border:1.5px solid var(--border2);cursor:pointer;color:var(--text3);background:var(--surface);transition:all .15s;font-family:inherit;}
+.day-sel-btn.selected{background:var(--green);border-color:var(--green);color:#fff;}
+.day-sel-btn:hover:not(.selected){border-color:var(--green);color:var(--green);}
+
+.type-selector{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:13px;}
+.type-btn{border:1.5px solid var(--border2);border-radius:var(--r);padding:9px 5px;text-align:center;font-size:11px;font-weight:500;cursor:pointer;color:var(--text2);background:var(--surface);transition:all .15s;font-family:inherit;}
+.type-btn svg{display:block;margin:0 auto 4px;}
+.type-btn.selected{border-color:var(--green);background:var(--gl);color:#0F6E56;}
+
+.provider-picker{display:flex;flex-direction:column;gap:5px;}
+.pp-row{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border:1.5px solid var(--border);border-radius:var(--r);cursor:pointer;transition:all .15s;}
+.pp-row:hover{border-color:var(--green);background:var(--gl);}
+.pp-row.selected{border-color:var(--green);background:var(--gl);}
+.pp-check{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;}
+.pp-row.selected .pp-check{background:var(--green);border-color:var(--green);}
+.pp-row.selected .pp-check::after{content:'✓';font-size:9px;color:#fff;font-weight:700;}
+
+.location-picker{display:flex;flex-direction:column;gap:5px;margin-bottom:13px;}
+.loc-row{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border:1.5px solid var(--border);border-radius:var(--r);cursor:pointer;transition:all .15s;}
+.loc-row:hover{border-color:var(--blue);background:var(--bl);}
+.loc-row.selected{border-color:var(--blue);background:var(--bl);}
+.loc-check{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;}
+.loc-row.selected .loc-check{background:var(--blue);border-color:var(--blue);}
+.loc-row.selected .loc-check::after{content:'✓';font-size:9px;color:#fff;font-weight:700;}
+
+.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
+.sum-row{background:var(--bg);border-radius:6px;padding:9px 11px;}
+.sum-label{font-size:10px;color:var(--text3);font-weight:500;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px;}
+.sum-val{font-size:13px;font-weight:600;color:var(--text);}
+.sum-full{grid-column:1/-1;}
+
+.modal-footer{padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;}
+.btn-cancel{background:transparent;border:1px solid var(--border2);color:var(--text2);padding:6px 13px;border-radius:var(--r);font-size:12px;cursor:pointer;font-family:inherit;}
+.btn-cancel:hover{background:var(--bg);}
+.btn-next{background:var(--text);color:#fff;padding:6px 14px;border-radius:var(--r);font-size:12px;cursor:pointer;border:none;font-family:inherit;font-weight:500;}
+.btn-next:hover{background:#333;}
+.btn-finish{background:var(--green);color:#fff;padding:6px 14px;border-radius:var(--r);font-size:12px;cursor:pointer;border:none;font-family:inherit;font-weight:500;}
+.btn-finish:hover{background:#0F6E56;}
+.btn-back{background:transparent;color:var(--text2);padding:6px 13px;border-radius:var(--r);font-size:12px;cursor:pointer;border:1px solid var(--border2);font-family:inherit;}
+.btn-back:hover{background:var(--bg);}
+.step-indicator{font-size:11px;color:var(--text3);}
+
+/* AI panel */
+.ai-panel{background:linear-gradient(135deg,#0A1628 0%,#1A2840 100%);border-radius:var(--rlg);padding:16px;margin-bottom:14px;border:1px solid #2A3850;}
+.ai-header{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+.ai-badge{font-size:10px;font-weight:700;background:rgba(29,158,117,0.3);color:#4EEDB8;border-radius:4px;padding:2px 7px;letter-spacing:0.05em;}
+.ai-title{font-size:13px;font-weight:600;color:#fff;}
+.ai-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.ai-card{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:var(--r);padding:10px;}
+.ai-card-icon{font-size:16px;margin-bottom:5px;}
+.ai-card-title{font-size:11px;font-weight:600;color:#E0E8F4;margin-bottom:3px;}
+.ai-card-desc{font-size:10px;color:rgba(224,232,244,0.55);line-height:1.4;}
+.ai-card-action{font-size:10px;color:#4EEDB8;font-weight:500;margin-top:6px;cursor:pointer;}
+.ai-card-action:hover{text-decoration:underline;}
+
+/* Demand explainer */
+.demand-explainer{background:var(--surface);border:1px solid var(--border);border-radius:var(--rlg);padding:16px;margin-bottom:14px;}
+.de-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.de-steps{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.de-step{background:var(--bg);border-radius:var(--r);padding:10px;}
+.de-step-num{width:20px;height:20px;border-radius:50%;background:var(--green);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-bottom:6px;}
+.de-step-title{font-size:11px;font-weight:600;color:var(--text);margin-bottom:3px;}
+.de-step-desc{font-size:10px;color:var(--text3);line-height:1.4;}
+
+/* Oncall notify panel */
+.oncall-pool{display:flex;flex-direction:column;gap:6px;}
+.pool-row{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface);}
+.pool-row.available{background:var(--gl);border-color:var(--gm);}
+.pool-row.busy{background:var(--bg);}
+.pool-status{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.pool-status.green{background:var(--green);}
+.pool-status.gray{background:var(--text3);}
+.pool-status.amber{background:var(--amber);}
+
+/* Waitlist sidebar badge */
+.waitlist-urgent{background:var(--rl);border-radius:var(--r);padding:8px 10px;margin:6px;border:1px solid #E24B4A;}
+.wu-title{font-size:11px;font-weight:600;color:var(--red);display:flex;align-items:center;gap:5px;margin-bottom:4px;}
+.wu-item{font-size:10px;color:#A32D2D;padding:3px 0;border-bottom:1px solid rgba(226,75,74,0.15);}
+.wu-item:last-child{border-bottom:none;}
+
+/* Insurance tags */
+.ins-tag{font-size:9px;background:var(--tl);color:var(--teal);border-radius:3px;padding:1px 5px;font-weight:600;margin-right:3px;}
+
+/* Shift display */
+.shift-row{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg);border-radius:var(--r);margin-bottom:4px;}
+.shift-label{font-size:11px;font-weight:600;color:var(--text);width:80px;}
+.shift-bar{flex:1;height:16px;background:var(--border);border-radius:3px;overflow:hidden;position:relative;}
+.shift-fill{height:100%;border-radius:3px;display:flex;align-items:center;padding-left:6px;font-size:9px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;}
+
+/* Toast */
+.success-toast{position:fixed;bottom:20px;right:20px;background:var(--text);color:#fff;padding:10px 16px;border-radius:var(--r);font-size:12px;font-weight:500;display:flex;align-items:center;gap:8px;z-index:300;transform:translateY(60px);opacity:0;transition:all .3s;max-width:320px;}
+.success-toast.show{transform:translateY(0);opacity:1;}
+
+/* Toggle */
+.toggle{width:30px;height:17px;border-radius:9px;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0;border:none;outline:none;}
+.toggle.on{background:var(--green);}
+.toggle.off{background:var(--border2);}
+.toggle::after{content:'';position:absolute;top:2px;width:13px;height:13px;border-radius:50%;background:#fff;transition:left .2s;}
+.toggle.on::after{left:15px;}
+.toggle.off::after{left:2px;}
+
+/* Rules */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.rule-row{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);}
+.rule-row:last-child{border-bottom:none;}
+.rl{font-size:12px;font-weight:500;color:var(--text);min-width:145px;}
+.rh{font-size:10px;color:var(--text3);margin-top:2px;}
+
+.av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;flex-shrink:0;}
+.av-sm{width:22px;height:22px;font-size:9px;}
+
+/* Specialty filter bar */
+.spec-filter{display:flex;gap:5px;margin-bottom:12px;flex-wrap:wrap;}
+.spec-pill{padding:4px 10px;border-radius:20px;font-size:11px;font-weight:500;border:1px solid var(--border2);background:var(--surface);color:var(--text2);cursor:pointer;transition:all .15s;}
+.spec-pill:hover{border-color:var(--green);color:var(--green);}
+.spec-pill.active{background:var(--green);border-color:var(--green);color:#fff;}
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <!-- ══ SIDEBAR ══ -->
+  <nav class="nav">
+    <div class="nav-logo">
+      <div class="nav-logo-text">HealthOS</div>
+      <div class="nav-logo-sub">Admin Console</div>
+    </div>
+
+    <!-- Urgent waitlist -->
+    <div class="waitlist-urgent" onclick="switchToTab('waitlist')">
+      <div class="wu-title"><span>🔴</span> Urgent waitlist</div>
+      <div class="wu-item">Raj Patel — Video · 5 days</div>
+      <div class="wu-item">James Miller — Video · 3 days</div>
+      <div style="font-size:10px;color:var(--red);margin-top:4px;font-weight:600;cursor:pointer;">View all 23 →</div>
+    </div>
+
+    <!-- On-call alert -->
+    <div class="oncall-alert" onclick="openOnCallModal()">
+      <div class="oca-title"><div class="pulse"></div> On-call pool active</div>
+      <div class="oca-sub">4 of 6 providers available · Tap to notify</div>
+    </div>
+
+    <div class="nav-section">Scheduling</div>
+    <div class="nav-item active" id="nav-scheduling" onclick="switchNav(this,'scheduling')">
+      <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.2"/><path d="M5 2v2M11 2v2M2 7h12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      Scheduling
+    </div>
+    <div class="nav-item" onclick="switchNav(this,'providers')">
+      <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="6" r="3" stroke="currentColor" stroke-width="1.2"/><path d="M2 14c0-2.5 2.686-4.5 6-4.5s6 2 6 4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      Providers
+    </div>
+    <div class="nav-item" onclick="switchNav(this,'waitlist')">
+      <svg viewBox="0 0 16 16" fill="none"><path d="M8 2a4 4 0 00-4 4c0 2.5-1.5 3-1.5 3h11S12 8.5 12 6a4 4 0 00-4-4zM6.5 9.5s0 2 1.5 2 1.5-2 1.5-2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      Waitlist
+      <span class="nav-badge">23</span>
+    </div>
+    <div class="nav-section">Config</div>
+    <div class="nav-item" onclick="switchNav(this,'rules')">
+      <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.2"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      Rules &amp; Policies
+    </div>
+    <div class="nav-item" onclick="switchNav(this,'insurance')">
+      <svg viewBox="0 0 16 16" fill="none"><path d="M8 2L3 4.5v4c0 3 2 5 5 5.5C11 13.5 13 11.5 13 8.5v-4L8 2z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+      Insurance
+    </div>
+    <div class="nav-item" onclick="switchNav(this,'reports')">
+      <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="4" width="12" height="9" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M5 4V3a1 1 0 011-1h4a1 1 0 011 1v1" stroke="currentColor" stroke-width="1.2"/></svg>
+      Reports
+    </div>
+  </nav>
+
+  <!-- ══ MAIN ══ -->
+  <div class="main">
+    <div class="topbar">
+      <div class="tab-bar">
+        <div class="tab active" id="tab-btn-overview" onclick="switchTab('overview',this)">Overview</div>
+        <div class="tab" id="tab-btn-templates" onclick="switchTab('templates',this)">Templates</div>
+        <div class="tab" id="tab-btn-providers" onclick="switchTab('providers',this)">Providers</div>
+        <div class="tab" id="tab-btn-rules" onclick="switchTab('rules',this)">Rules</div>
+        <div class="tab" id="tab-btn-waitlist" onclick="switchTab('waitlist',this)">Waitlist <span style="background:var(--rl);color:var(--red);font-size:9px;font-weight:600;padding:1px 5px;border-radius:10px;margin-left:3px;">23</span></div>
+        <div class="tab" id="tab-btn-ai" onclick="switchTab('ai',this)">✦ AI Insights</div>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-ghost">Export</button>
+        <button class="btn btn-primary">Publish changes</button>
+      </div>
+    </div>
+
+    <!-- ══ OVERVIEW ══ -->
+    <div class="tab-content active" id="tab-overview" style="flex:1;overflow:hidden;display:flex;flex-direction:column;">
+      <div class="ov-main" id="ov-main">
+        <div class="ov-left">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+            <div class="week-nav">
+              <button class="nav-btn" onclick="changeWeek(-1)"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M7.5 2.5L4.5 6l3 3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+              <div class="week-label" id="week-label"></div>
+              <button class="nav-btn" onclick="changeWeek(1)"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M4.5 2.5L7.5 6l-3 3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+              <button class="today-btn" id="today-btn" onclick="goToday()">Today</button>
+            </div>
+            <div style="display:flex;gap:6px;">
+              <select style="width:auto;font-size:11px;padding:4px 8px;"><option>All specialties</option><option>General Practice</option><option>Mental Health</option><option>Cardiology</option></select>
+              <select style="width:auto;font-size:11px;padding:4px 8px;"><option>All visit types</option><option>Video only</option><option>In-Person only</option><option>Walk-in only</option></select>
+            </div>
+          </div>
+          <div class="stats-row" id="stats-row"></div>
+
+          <!-- Demand explainer callout -->
+          <div style="background:var(--bl);border:1px solid #B5D4F4;border-radius:var(--r);padding:10px 14px;margin-bottom:14px;display:flex;align-items:flex-start;gap:10px;">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;margin-top:1px;"><circle cx="7" cy="7" r="6" stroke="#185FA5" stroke-width="1.2"/><path d="M7 6v4M7 4.5v.5" stroke="#185FA5" stroke-width="1.2" stroke-linecap="round"/></svg>
+            <div><div style="font-size:11px;font-weight:600;color:var(--blue);">How predicted demand is calculated</div><div style="font-size:11px;color:#185FA5;margin-top:2px;">Based on 8-week historical avg by day + specialty + visit type, adjusted for seasonal trends and panel growth. Updated every Sunday. <span style="font-weight:600;cursor:pointer;text-decoration:underline;" onclick="switchTab('ai',document.getElementById('tab-btn-ai'))">View AI model →</span></div></div>
+          </div>
+
+          <div class="panel">
+            <div class="ph">
+              <div><div class="pt">Capacity vs demand</div><div class="ps">Click any day to view breakdown and take action</div></div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <div style="display:flex;align-items:center;gap:3px;font-size:10px;color:var(--text2);"><div style="width:9px;height:6px;background:#B5D4F4;border-radius:1px;"></div>Supply</div>
+                <div style="display:flex;align-items:center;gap:3px;font-size:10px;color:var(--text2);"><div style="width:9px;height:6px;background:var(--green);border-radius:1px;"></div>Demand</div>
+                <div style="display:flex;align-items:center;gap:3px;font-size:10px;color:var(--text2);"><div style="width:9px;height:6px;background:#E24B4A;border-radius:1px;"></div>Gap</div>
+                <div style="display:flex;align-items:center;gap:3px;font-size:10px;color:var(--text2);"><div style="width:9px;height:6px;background:var(--blue);border-radius:1px;"></div>Surplus</div>
+              </div>
+            </div>
+            <div class="pb"><div class="cvd-grid" id="cvd-grid"></div></div>
+          </div>
+        </div>
+        <div class="ov-right" id="ov-drawer">
+          <div class="drawer-header">
+            <div><div class="drawer-title" id="drawer-title">—</div><div class="drawer-sub" id="drawer-sub">—</div></div>
+            <button class="close-btn" onclick="closeDrawer()">✕</button>
+          </div>
+          <div class="drawer-body" id="drawer-body"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ TEMPLATES ══ -->
+    <div class="tab-content" id="tab-templates">
+      <div class="content">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <div><div style="font-size:15px;font-weight:600;">Slot templates</div><div style="font-size:11px;color:var(--text3);margin-top:2px;">Reusable patterns · assign to providers · slots auto-generate from effective date</div></div>
+          <button class="btn btn-primary" onclick="openNewTemplateModal()">
+            <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            New template
+          </button>
+        </div>
+        <div class="tmpl-layout">
+          <div>
+            <div class="tmpl-list" id="tmpl-list"></div>
+            <div class="add-tmpl-btn" onclick="openNewTemplateModal()">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              Create new template
+            </div>
+          </div>
+          <div class="tmpl-detail" id="tmpl-detail"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ PROVIDERS ══ -->
+    <div class="tab-content" id="tab-providers" style="flex:1;overflow:hidden;display:flex;flex-direction:column;">
+      <div class="prov-drawer-main" id="prov-drawer-main">
+        <div class="prov-left">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+            <div><div style="font-size:15px;font-weight:600;">Provider schedules</div><div style="font-size:11px;color:var(--text3);margin-top:1px;">Click any row to view full provider detail</div></div>
+            <div style="display:flex;gap:6px;">
+              <select style="width:auto;"><option>All locations</option><option>North Clinic</option><option>South Clinic</option><option>Virtual only</option></select>
+            </div>
+          </div>
+          <div class="spec-filter" id="spec-filter">
+            <div class="spec-pill active" onclick="filterSpec(this,'all')">All specialties</div>
+            <div class="spec-pill" onclick="filterSpec(this,'gp')">General Practice</div>
+            <div class="spec-pill" onclick="filterSpec(this,'mh')">Mental Health</div>
+            <div class="spec-pill" onclick="filterSpec(this,'cardio')">Cardiology</div>
+            <div class="spec-pill" onclick="filterSpec(this,'derm')">Dermatology</div>
+            <div class="spec-pill" onclick="filterSpec(this,'peds')">Pediatrics</div>
+          </div>
+          <div class="panel">
+            <div class="ph" style="padding:8px 12px;">
+              <div style="display:flex;gap:6px;width:100%;align-items:center;">
+                <input type="text" placeholder="Search providers..." style="flex:1;font-size:11px;padding:5px 8px;">
+                <select style="width:auto;font-size:11px;padding:4px 7px;"><option>All states</option><option>CA</option><option>NY</option><option>TX</option><option>FL</option></select>
+                <select style="width:auto;font-size:11px;padding:4px 7px;"><option>All insurance</option><option>Medicare</option><option>Blue Cross</option><option>Aetna</option></select>
+              </div>
+            </div>
+            <div style="padding:0;">
+              <table class="ptable" id="provider-table">
+                <thead><tr>
+                  <th>Provider</th><th>Specialty</th><th>Template</th><th>Licensed states</th>
+                  <th>Insurance</th><th>Shift</th><th>This week</th><th>Util.</th><th>Walk-in</th>
+                </tr></thead>
+                <tbody id="provider-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="prov-right" id="prov-drawer">
+          <div class="drawer-header">
+            <div><div class="drawer-title" id="prov-drawer-title">Provider detail</div><div class="drawer-sub" id="prov-drawer-sub">—</div></div>
+            <button class="close-btn" onclick="closeProvDrawer()">✕</button>
+          </div>
+          <div class="drawer-body" id="prov-drawer-body"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ RULES ══ -->
+    <div class="tab-content" id="tab-rules">
+      <div class="content">
+        <div class="two-col">
+          <div class="panel">
+            <div class="ph"><div><div class="pt">Scheduling rules</div><div class="ps">Org-level defaults · templates can override</div></div></div>
+            <div class="pb">
+              <div class="rule-row"><div><div class="rl">Min booking lead time</div><div class="rh">How far ahead patient must book</div></div><select style="width:auto;"><option>2 hours</option><option>4 hours</option><option>24 hours</option></select></div>
+              <div class="rule-row"><div><div class="rl">Max booking window</div><div class="rh">How far in advance patients can book</div></div><select style="width:auto;"><option>30 days</option><option>60 days</option><option>90 days</option></select></div>
+              <div class="rule-row"><div><div class="rl">Default slot duration</div><div class="rh">Applied if template doesn't specify</div></div><select style="width:auto;"><option>20 min</option><option>30 min</option><option>45 min</option></select></div>
+              <div class="rule-row"><div><div class="rl">Buffer between slots</div><div class="rh">Gap added after each appointment</div></div><select style="width:auto;"><option>None</option><option>5 min</option><option>10 min</option></select></div>
+              <div class="rule-row"><div><div class="rl">Overbooking limit</div><div class="rh">Max extra bookings beyond capacity</div></div><select style="width:auto;"><option>Not allowed</option><option>1 per day</option><option>2 per day</option></select></div>
+              <div class="rule-row"><div><div class="rl">Cancellation window</div><div class="rh">How late a patient can cancel</div></div><select style="width:auto;"><option>2 hours</option><option>24 hours</option><option>48 hours</option></select></div>
+              <div class="rule-row"><div><div class="rl">No-show threshold</div><div class="rh">Auto-flag provider if above</div></div><select style="width:auto;"><option>20%</option><option>30%</option><option>40%</option></select></div>
+            </div>
+          </div>
+          <div>
+            <div class="panel" style="margin-bottom:14px;">
+              <div class="ph"><div><div class="pt">Walk-in / On-call rules</div><div class="ps">Applied to all walk-in windows</div></div></div>
+              <div class="pb">
+                <div class="rule-row"><div><div class="rl">Max queue size</div><div class="rh">Virtual waiting room limit</div></div><select style="width:auto;"><option>5 patients</option><option>10 patients</option><option>Unlimited</option></select></div>
+                <div class="rule-row"><div><div class="rl">Alert provider when</div><div class="rh">Trigger for provider notification</div></div><select style="width:auto;"><option>Patient joins queue</option><option>Queue ≥ 3</option><option>Manually only</option></select></div>
+                <div class="rule-row"><div><div class="rl">Auto-close window</div><div class="rh">When walk-in window closes</div></div><select style="width:auto;"><option>At end time</option><option>When queue full</option><option>Manually only</option></select></div>
+                <div class="rule-row"><div><div class="rl">Visit modes allowed</div><div class="rh">For walk-in slots</div></div><select style="width:auto;"><option>Video &amp; Phone</option><option>Video only</option><option>Phone only</option></select></div>
+              </div>
+            </div>
+            <div class="panel">
+              <div class="ph"><div><div class="pt">Video visit — licensing rules</div><div class="ps">Providers can only see patients in their licensed states</div></div></div>
+              <div class="pb">
+                <div class="rule-row"><div><div class="rl">License validation</div><div class="rh">Auto-check before booking</div></div><span class="badge bg-green">Enabled</span></div>
+                <div class="rule-row"><div><div class="rl">Mismatch action</div><div class="rh">What happens if state doesn't match</div></div><select style="width:auto;"><option>Block booking</option><option>Warn admin</option><option>Allow with override</option></select></div>
+                <div class="rule-row"><div><div class="rl">License expiry alert</div><div class="rh">Notify admin before expiry</div></div><select style="width:auto;"><option>30 days before</option><option>60 days before</option><option>90 days before</option></select></div>
+                <div class="rule-row"><div><div class="rl">Compact state auto-match</div><div class="rh">Use IMLC reciprocity for video</div></div><button class="toggle on" onclick="this.classList.toggle('on');this.classList.toggle('off');"></button></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ WAITLIST ══ -->
+    <div class="tab-content" id="tab-waitlist">
+      <div class="content">
+        <div style="background:var(--bl);border:1px solid #B5D4F4;border-radius:var(--r);padding:10px 14px;margin-bottom:12px;display:flex;gap:10px;">
+          <div style="flex:1;"><div style="font-size:12px;font-weight:600;color:var(--blue);">Full waitlist management</div><div style="font-size:11px;color:#185FA5;margin-top:2px;">This view manages all waitlisted patients with full history, bulk actions, and slot offering. The sidebar counter shows only urgent same-day or next-day cases needing immediate attention.</div></div>
+        </div>
+        <div class="panel">
+          <div class="ph">
+            <div><div class="pt">Waitlist — 23 patients</div><div class="ps">Sorted by wait time · longest first</div></div>
+            <div style="display:flex;gap:5px;">
+              <select style="width:auto;font-size:11px;"><option>All visit types</option><option>Video</option><option>In-Person</option></select>
+              <select style="width:auto;font-size:11px;"><option>All specialties</option><option>General Practice</option><option>Mental Health</option></select>
+              <select style="width:auto;font-size:11px;"><option>All insurance</option><option>Medicare</option><option>Blue Cross</option></select>
+              <button class="btn btn-ghost" style="font-size:11px;padding:4px 9px;">Auto-offer all</button>
+            </div>
+          </div>
+          <div class="pb" id="waitlist-body">
+            <!-- dynamically rendered -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ INSURANCE TAB ══ -->
+    <div class="tab-content" id="tab-insurance">
+      <div class="content">
+        <div class="panel">
+          <div class="ph"><div><div class="pt">Insurance credentialing</div><div class="ps">Provider insurance panels affect which patients they can see · admin manages credentialing status</div></div><button class="btn btn-primary" style="font-size:11px;">+ Add credentialing</button></div>
+          <div style="padding:0;">
+            <table class="ptable">
+              <thead><tr><th>Provider</th><th>Insurance plans</th><th>Medicare</th><th>Medicaid</th><th>Credentialing status</th><th>Expiry</th></tr></thead>
+              <tbody>
+                <tr><td><div class="pnc"><div class="av" style="background:#E6F1FB;color:var(--blue);">DL</div><div><div class="pn">Dr. Lee</div><div class="psp">General Practice</div></div></div></td><td><span class="ins-tag">Blue Cross</span><span class="ins-tag">Aetna</span><span class="ins-tag">UHC</span></td><td><span class="badge bg-green">Active</span></td><td><span class="badge bg-green">Active</span></td><td><span class="badge bg-green">Current</span></td><td style="font-size:11px;color:var(--text2);">Dec 2026</td></tr>
+                <tr><td><div class="pnc"><div class="av" style="background:var(--pl);color:var(--purple);">GP</div><div><div class="pn">Gennie Provider</div><div class="psp">Mental Health</div></div></div></td><td><span class="ins-tag">Aetna</span><span class="ins-tag">Cigna</span></td><td><span class="badge bg-red">Not enrolled</span></td><td><span class="badge bg-amber">Pending</span></td><td><span class="badge bg-amber">In review</span></td><td style="font-size:11px;color:var(--text2);">—</td></tr>
+                <tr><td><div class="pnc"><div class="av" style="background:var(--gl);color:#0F6E56;">DS</div><div><div class="pn">Dr. Smith</div><div class="psp">Cardiology</div></div></div></td><td><span class="ins-tag">Medicare</span><span class="ins-tag">Blue Cross</span><span class="ins-tag">Humana</span></td><td><span class="badge bg-green">Active</span></td><td><span class="badge bg-green">Active</span></td><td><span class="badge bg-green">Current</span></td><td style="font-size:11px;color:var(--text2);">Mar 2027</td></tr>
+                <tr><td><div class="pnc"><div class="av" style="background:var(--al);color:var(--amber);">DP</div><div><div class="pn">Dr. Patel</div><div class="psp">General Practice</div></div></div></td><td><span class="ins-tag">Blue Cross</span><span class="ins-tag">Aetna</span></td><td><span class="badge bg-amber">Expiring</span></td><td><span class="badge bg-green">Active</span></td><td><span class="badge bg-amber">Renewal needed</span></td><td style="font-size:11px;color:var(--amber);font-weight:600;">Jun 2026 ⚠</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div style="background:var(--al);border:1px solid var(--amber);border-radius:var(--r);padding:12px 14px;font-size:11px;color:#633806;">
+          <strong>How insurance impacts scheduling:</strong> When a patient books, their insurance plan is matched against the provider's active credentialing. If the provider is not credentialed with the patient's plan, booking is blocked or flagged for admin review. Walk-in slots use the same check when the patient enters the queue.
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ AI INSIGHTS ══ -->
+    <div class="tab-content" id="tab-ai">
+      <div class="content">
+        <div class="ai-panel">
+          <div class="ai-header">
+            <div class="ai-badge">AI</div>
+            <div class="ai-title">AI-powered scheduling intelligence</div>
+          </div>
+          <div class="ai-cards">
+            <div class="ai-card">
+              <div class="ai-card-icon">📈</div>
+              <div class="ai-card-title">Demand forecasting</div>
+              <div class="ai-card-desc">Predicts weekly appointment volume by specialty, visit type, and day using 8-week rolling average adjusted for seasonality and panel growth.</div>
+              <div class="ai-card-action" onclick="showToast('Demand model refreshed')">Refresh model →</div>
+            </div>
+            <div class="ai-card">
+              <div class="ai-card-icon">🎯</div>
+              <div class="ai-card-title">Gap detection</div>
+              <div class="ai-card-desc">Automatically identifies capacity gaps and ranks them by severity. Suggests which provider to assign and which template to use to close each gap.</div>
+              <div class="ai-card-action" onclick="switchTab('overview',document.getElementById('tab-btn-overview'))">View gaps →</div>
+            </div>
+            <div class="ai-card">
+              <div class="ai-card-icon">🔄</div>
+              <div class="ai-card-title">Auto-scheduling</div>
+              <div class="ai-card-desc">Proposes an optimal weekly schedule across all providers based on predicted demand, licensed states, insurance panels, and shift preferences.</div>
+              <div class="ai-card-action" onclick="showToast('Auto-schedule generated — review in Overview')">Generate schedule →</div>
+            </div>
+            <div class="ai-card">
+              <div class="ai-card-icon">⚡</div>
+              <div class="ai-card-title">No-show prediction</div>
+              <div class="ai-card-desc">Flags appointments with high no-show probability (>35%) based on patient history, time of day, and appointment type. Suggests overbooking or SMS reminders.</div>
+              <div class="ai-card-action" onclick="showToast('No-show report opened')">View predictions →</div>
+            </div>
+            <div class="ai-card">
+              <div class="ai-card-icon">📋</div>
+              <div class="ai-card-title">Waitlist prioritization</div>
+              <div class="ai-card-desc">Ranks waitlisted patients by clinical urgency signals (visit reason, wait time, insurance match) and auto-matches to newly opened slots.</div>
+              <div class="ai-card-action" onclick="switchTab('waitlist',document.getElementById('tab-btn-waitlist'))">View waitlist →</div>
+            </div>
+            <div class="ai-card">
+              <div class="ai-card-icon">📝</div>
+              <div class="ai-card-title">Documentation assist</div>
+              <div class="ai-card-desc">Pre-fills visit summaries for providers based on appointment type and patient history, reducing post-visit documentation time by an estimated 40%.</div>
+              <div class="ai-card-action" onclick="showToast('Documentation assist is provider-facing')">Learn more →</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="demand-explainer">
+          <div class="de-title">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="#185FA5" stroke-width="1.2"/><path d="M7 6v4M7 4.5v.5" stroke="#185FA5" stroke-width="1.2" stroke-linecap="round"/></svg>
+            How predicted demand is calculated
+          </div>
+          <div class="de-steps">
+            <div class="de-step"><div class="de-step-num">1</div><div class="de-step-title">Historical baseline</div><div class="de-step-desc">8-week rolling average of actual appointments, broken down by day, specialty, and visit type.</div></div>
+            <div class="de-step"><div class="de-step-num">2</div><div class="de-step-title">Seasonal adjustment</div><div class="de-step-desc">Year-over-year patterns applied — e.g. flu season spikes GP demand 30% in Nov–Jan.</div></div>
+            <div class="de-step"><div class="de-step-num">3</div><div class="de-step-title">Panel growth</div><div class="de-step-desc">New patient registrations and provider panel changes adjust the baseline up or down.</div></div>
+            <div class="de-step"><div class="de-step-num">4</div><div class="de-step-title">Gap signal</div><div class="de-step-desc">Waitlist volume and missed appointment rates signal unmet demand that the model adds to the forecast.</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ REPORTS (stub) ══ -->
+    <div class="tab-content" id="tab-reports">
+      <div class="content"><div class="panel"><div class="ph"><div class="pt">Reports</div><div class="ps">Coming soon</div></div></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ NEW TEMPLATE WIZARD ══ -->
+<div class="modal-overlay" id="new-tmpl-modal">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-title">Create new template</div>
+      <div class="modal-sub">Define a reusable availability pattern · slots auto-generate from the effective date</div>
+      <div class="stepper" id="wizard-stepper"></div>
+    </div>
+    <div class="modal-body">
+      <!-- Step 0: Visit type -->
+      <div class="step-pane active" id="wpane-0">
+        <div class="field-row"><div class="field-label">Template name</div><input type="text" id="w-tmpl-name" placeholder="e.g. Standard Video (1:1)"></div>
+        <div class="field-row"><div class="field-label">Visit type</div>
+          <div class="type-selector">
+            <button class="type-btn selected" data-type="Video" onclick="wSelectType(this)"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor"><rect x="1" y="3.5" width="9" height="7" rx="1.5" stroke-width="1.2"/><path d="M10 6.5l4-2v7l-4-2V6.5z" stroke-width="1.2" stroke-linejoin="round"/></svg>Video</button>
+            <button class="type-btn" data-type="In-Person" onclick="wSelectType(this)"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor"><circle cx="8" cy="5" r="2.5" stroke-width="1.2"/><path d="M2 13c0-2.21 2.686-4 6-4s6 1.79 6 4" stroke-width="1.2" stroke-linecap="round"/></svg>In-Person</button>
+            <button class="type-btn" data-type="Phone" onclick="wSelectType(this)"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor"><path d="M3 3.5C3 2.67 3.67 2 4.5 2h1.17c.35 0 .66.22.78.55l.9 2.5a.83.83 0 01-.19.88L6.08 7c.7 1.35 1.83 2.47 3.2 3.2l1.07-1.08a.83.83 0 01.88-.19l2.5.9c.33.12.55.43.55.78V11.5c0 .83-.67 1.5-1.5 1.5C5.82 13 3 10.18 3 6.83V3.5z" stroke-width="1.2" stroke-linejoin="round"/></svg>Phone</button>
+            <button class="type-btn" data-type="Walk-in" onclick="wSelectType(this)"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor"><path d="M8 2a4 4 0 00-4 4c0 2.5-1.5 3-1.5 3h11S12 8.5 12 6a4 4 0 00-4-4zM6.5 9.5s0 2 1.5 2 1.5-2 1.5-2" stroke-width="1.2" stroke-linecap="round"/></svg>Walk-in</button>
+          </div>
+        </div>
+        <div class="field-row" id="w-session-row"><div class="field-label">Session type</div><select><option>1:1 (individual)</option><option>Group (up to 8)</option></select></div>
+        <div class="field-row"><div class="field-label">Specialty</div><select><option>General Practice</option><option>Mental Health</option><option>Cardiology</option><option>Dermatology</option><option>Pediatrics</option></select></div>
+        <div class="field-row"><div class="field-label">Patient self-booking</div><select><option>Enabled — patients book directly</option><option>Disabled — staff books on behalf</option></select></div>
+      </div>
+
+      <!-- Step 1: Location (in-person specific) -->
+      <div class="step-pane" id="wpane-1">
+        <div class="field-row"><div class="field-label">Shift type</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;">
+            <button class="type-btn selected" onclick="this.closest('div').querySelectorAll('.type-btn').forEach(b=>b.classList.remove('selected'));this.classList.add('selected')"><div style="font-size:11px;color:var(--text3);margin-bottom:3px;">🌅</div>Morning<div style="font-size:9px;color:var(--text3);">6am–2pm</div></button>
+            <button class="type-btn" onclick="this.closest('div').querySelectorAll('.type-btn').forEach(b=>b.classList.remove('selected'));this.classList.add('selected')"><div style="font-size:11px;color:var(--text3);margin-bottom:3px;">☀️</div>Afternoon<div style="font-size:9px;color:var(--text3);">2pm–10pm</div></button>
+            <button class="type-btn" onclick="this.closest('div').querySelectorAll('.type-btn').forEach(b=>b.classList.remove('selected'));this.classList.add('selected')"><div style="font-size:11px;color:var(--text3);margin-bottom:3px;">🌙</div>Evening<div style="font-size:9px;color:var(--text3);">10pm–6am</div></button>
+          </div>
+        </div>
+        <div class="field-row"><div class="field-label">Active days</div>
+          <div class="day-selector">
+            <button class="day-sel-btn selected" onclick="this.classList.toggle('selected')">M</button>
+            <button class="day-sel-btn selected" onclick="this.classList.toggle('selected')">T</button>
+            <button class="day-sel-btn selected" onclick="this.classList.toggle('selected')">W</button>
+            <button class="day-sel-btn selected" onclick="this.classList.toggle('selected')">T</button>
+            <button class="day-sel-btn selected" onclick="this.classList.toggle('selected')">F</button>
+            <button class="day-sel-btn" onclick="this.classList.toggle('selected')">S</button>
+            <button class="day-sel-btn" onclick="this.classList.toggle('selected')">S</button>
+          </div>
+        </div>
+        <div class="half">
+          <div class="field-row"><div class="field-label">Start time</div><select><option>8:00 AM</option><option>9:00 AM</option><option>10:00 AM</option><option>12:00 PM</option></select></div>
+          <div class="field-row"><div class="field-label">End time</div><select><option>4:00 PM</option><option>5:00 PM</option><option>6:00 PM</option><option>7:00 PM</option></select></div>
+        </div>
+        <div class="field-row"><div class="field-label">Effective from</div><input type="text" value="Apr 28, 2026"></div>
+        <div class="field-row"><div class="field-label">Recurrence</div><select><option>Weekly (ongoing)</option><option>4 weeks</option><option>8 weeks</option><option>One-time</option></select></div>
+        <div class="field-row" id="w-location-section">
+          <div class="field-label">Location(s) — select all that apply</div>
+          <div class="field-hint">In-person templates must specify which clinic locations this applies to</div>
+          <div class="location-picker">
+            <div class="loc-row selected" onclick="this.classList.toggle('selected');this.querySelector('.loc-check').classList.toggle('done',this.classList.contains('selected'))">
+              <div><div style="font-size:12px;font-weight:500;">North Clinic</div><div style="font-size:10px;color:var(--text3);">123 Main St, Suite 400 · 8 rooms</div></div>
+              <div class="loc-check"></div>
+            </div>
+            <div class="loc-row" onclick="this.classList.toggle('selected');this.querySelector('.loc-check').classList.toggle('done',this.classList.contains('selected'))">
+              <div><div style="font-size:12px;font-weight:500;">South Clinic</div><div style="font-size:10px;color:var(--text3);">456 Oak Ave, Floor 2 · 5 rooms</div></div>
+              <div class="loc-check"></div>
+            </div>
+            <div class="loc-row" onclick="this.classList.toggle('selected');this.querySelector('.loc-check').classList.toggle('done',this.classList.contains('selected'))">
+              <div><div style="font-size:12px;font-weight:500;">East Health Center</div><div style="font-size:10px;color:var(--text3);">789 Pine Rd · 3 rooms</div></div>
+              <div class="loc-check"></div>
+            </div>
+          </div>
+          <div class="field-row" style="margin-top:8px;margin-bottom:0;"><div class="field-label">Room assignment</div><select><option>Auto-assign (system picks)</option><option>Room 1</option><option>Room 2</option><option>Room 3</option></select></div>
+        </div>
+      </div>
+
+      <!-- Step 2: Rules -->
+      <div class="step-pane" id="wpane-2">
+        <div class="half">
+          <div class="field-row"><div class="field-label">Slot duration</div><select><option>20 min</option><option>30 min</option><option>45 min</option><option>60 min</option></select></div>
+          <div class="field-row"><div class="field-label">Buffer between slots</div><select><option>None</option><option>5 min</option><option>10 min</option><option>15 min</option></select></div>
+        </div>
+        <div class="half">
+          <div class="field-row"><div class="field-label">Min lead time</div><select><option>Use org default (2 hrs)</option><option>1 hour</option><option>4 hours</option><option>24 hours</option></select></div>
+          <div class="field-row"><div class="field-label">Max booking window</div><select><option>Use org default (30 days)</option><option>7 days</option><option>14 days</option><option>60 days</option></select></div>
+        </div>
+        <div class="field-row"><div class="field-label">Overbooking</div><select><option>Not allowed</option><option>1 per session</option><option>2 per session</option></select></div>
+        <div class="field-row"><div class="field-label">Referral required</div><select><option>No</option><option>Yes — referral code required</option></select></div>
+        <div class="field-row"><div class="field-label">Insurance restriction</div>
+          <div class="field-hint">Restrict this template to providers credentialed with specific plans</div>
+          <select><option>No restriction — all credentialed providers</option><option>Medicare only</option><option>Commercial plans only</option><option>Custom list...</option></select>
+        </div>
+        <div class="field-row" id="w-state-row"><div class="field-label">Licensed states (video only)</div>
+          <div class="field-hint">Only providers licensed in the patient's state can be booked</div>
+          <select multiple style="height:80px;"><option selected>CA</option><option selected>NY</option><option>TX</option><option>FL</option><option>WA</option><option>OR</option></select>
+        </div>
+      </div>
+
+      <!-- Step 3: Providers -->
+      <div class="step-pane" id="wpane-3">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:10px;">Select providers. For video templates, only providers licensed in the relevant states are shown.</div>
+        <div style="margin-bottom:8px;"><input type="text" placeholder="Search providers..." style="font-size:12px;"></div>
+        <div class="provider-picker">
+          <div class="pp-row selected" onclick="this.classList.toggle('selected')">
+            <div style="display:flex;align-items:center;gap:8px;"><div class="av" style="background:#E6F1FB;color:var(--blue);">DL</div><div><div style="font-size:12px;font-weight:500;">Dr. Lee</div><div style="font-size:10px;color:var(--text3);">GP · CA, NY licensed · Blue Cross, Aetna · Morning shift</div></div></div>
+            <div class="pp-check"></div>
+          </div>
+          <div class="pp-row" onclick="this.classList.toggle('selected')">
+            <div style="display:flex;align-items:center;gap:8px;"><div class="av" style="background:var(--pl);color:var(--purple);">GP</div><div><div style="font-size:12px;font-weight:500;">Gennie Provider</div><div style="font-size:10px;color:var(--text3);">Mental Health · CA licensed · Aetna, Cigna · Afternoon shift</div></div></div>
+            <div class="pp-check"></div>
+          </div>
+          <div class="pp-row selected" onclick="this.classList.toggle('selected')">
+            <div style="display:flex;align-items:center;gap:8px;"><div class="av" style="background:var(--gl);color:#0F6E56;">DS</div><div><div style="font-size:12px;font-weight:500;">Dr. Smith</div><div style="font-size:10px;color:var(--text3);">Cardiology · CA, NY, TX licensed · Medicare, Blue Cross · Morning shift</div></div></div>
+            <div class="pp-check"></div>
+          </div>
+          <div class="pp-row" onclick="this.classList.toggle('selected')">
+            <div style="display:flex;align-items:center;gap:8px;"><div class="av" style="background:var(--al);color:var(--amber);">DP</div><div><div style="font-size:12px;font-weight:500;">Dr. Patel</div><div style="font-size:10px;color:var(--text3);">GP · CA licensed · Blue Cross, Aetna · Afternoon shift</div></div></div>
+            <div class="pp-check"></div>
+          </div>
+          <div class="pp-row" onclick="this.classList.toggle('selected')">
+            <div style="display:flex;align-items:center;gap:8px;"><div class="av" style="background:#FCE8E8;color:var(--red);">MK</div><div><div style="font-size:12px;font-weight:500;">Dr. Kim</div><div style="font-size:10px;color:var(--text3);">GP · CA, FL licensed · No insurance on file ⚠</div></div></div>
+            <div class="pp-check"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 4: Review -->
+      <div class="step-pane" id="wpane-4">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:12px;">Review before creating. Once published, slots auto-generate from the effective date.</div>
+        <div class="summary-grid">
+          <div class="sum-row"><div class="sum-label">Template name</div><div class="sum-val" id="w-sum-name">—</div></div>
+          <div class="sum-row"><div class="sum-label">Visit type</div><div class="sum-val" id="w-sum-type">Video</div></div>
+          <div class="sum-row"><div class="sum-label">Active days</div><div class="sum-val">Mon – Fri</div></div>
+          <div class="sum-row"><div class="sum-label">Hours / Shift</div><div class="sum-val">9 AM – 5 PM · Morning</div></div>
+          <div class="sum-row"><div class="sum-label">Slot duration</div><div class="sum-val">30 min · 5 min buffer</div></div>
+          <div class="sum-row"><div class="sum-label">Effective from</div><div class="sum-val">Apr 28, 2026</div></div>
+          <div class="sum-row"><div class="sum-label">Licensed states</div><div class="sum-val">CA, NY</div></div>
+          <div class="sum-row"><div class="sum-label">Insurance restriction</div><div class="sum-val">All credentialed</div></div>
+          <div class="sum-row sum-full"><div class="sum-label">Providers assigned</div><div class="sum-val" id="w-sum-providers">Dr. Lee, Dr. Smith</div></div>
+          <div class="sum-row sum-full" style="background:var(--gl);border:1px solid var(--gm);"><div class="sum-label">Estimated output</div><div class="sum-val" style="color:var(--green);">~16 slots/day · 80 slots/week across 2 providers</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <div style="display:flex;gap:6px;"><button class="btn-back" id="w-back" onclick="wBack()" style="display:none;">← Back</button><button class="btn-cancel" onclick="document.getElementById('new-tmpl-modal').classList.remove('visible')">Cancel</button></div>
+      <div style="display:flex;align-items:center;gap:8px;"><span class="step-indicator" id="w-indicator">Step 1 of 5</span><button class="btn-next" id="w-next" onclick="wNext()">Next →</button><button class="btn-finish" id="w-finish" onclick="finishTemplate()" style="display:none;">Create template</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ASSIGN PROVIDERS MODAL ══ -->
+<div class="modal-overlay" id="assign-modal">
+  <div class="modal modal-sm">
+    <div class="modal-header"><div class="modal-title" id="assign-modal-title">Assign providers</div><div class="modal-sub" id="assign-modal-sub"></div></div>
+    <div class="modal-body">
+      <div style="margin-bottom:8px;"><input type="text" placeholder="Search..." style="font-size:12px;"></div>
+      <div class="provider-picker" id="assign-picker">
+        <div class="pp-row selected" onclick="this.classList.toggle('selected')"><div style="display:flex;align-items:center;gap:8px;"><div class="av" style="background:#E6F1FB;color:var(--blue);">DL</div><div><div style="font-size:12px;font-weight:500;">Dr. Lee</div><div style="font-size:10px;color:var(--text3);">GP · 87% util · CA, NY · Morning</div></div></div><div class="pp-check"></div></div>
+        <div class="pp-row" onclick="this.classList.toggle('selected')"><div style="display:flex;align-items:center;gap:8px;"><div class="av" style="background:var(--pl);color:var(--purple);">GP</div><div><div style="font-size:12px;font-weight:500;">Gennie Provider</div><div style="font-size:10px;color:var(--text3);">Mental Health · 63% util · CA · Afternoon</div></div></div><div class="pp-check"></div></div>
+        <div class="pp-row selected" onclick="this.classList.toggle('selected')"><div style="display:flex;align-items:center;gap:8px;"><div class="av" style="background:var(--gl);color:#0F6E56;">DS</div><div><div style="font-size:12px;font-weight:500;">Dr. Smith</div><div style="font-size:10px;color:var(--text3);">Cardiology · 94% util · CA,NY,TX · Morning</div></div></div><div class="pp-check"></div></div>
+        <div class="pp-row" onclick="this.classList.toggle('selected')"><div style="display:flex;align-items:center;gap:8px;"><div class="av" style="background:var(--al);color:var(--amber);">DP</div><div><div style="font-size:12px;font-weight:500;">Dr. Patel</div><div style="font-size:10px;color:var(--text3);">GP · 67% util · CA · Afternoon</div></div></div><div class="pp-check"></div></div>
+        <div class="pp-row" onclick="this.classList.toggle('selected')"><div style="display:flex;align-items:center;gap:8px;"><div class="av" style="background:#FCE8E8;color:var(--red);">MK</div><div><div style="font-size:12px;font-weight:500;">Dr. Kim</div><div style="font-size:10px;color:var(--text3);">GP · No template · CA,FL</div></div></div><div class="pp-check"></div></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn-cancel" onclick="document.getElementById('assign-modal').classList.remove('visible')">Cancel</button><button class="btn-finish" onclick="document.getElementById('assign-modal').classList.remove('visible');showToast('Provider assignments saved')">Save assignment</button></div>
+  </div>
+</div>
+
+<!-- ══ ACTION MODAL ══ -->
+<div class="modal-overlay" id="action-modal">
+  <div class="modal modal-sm">
+    <div class="modal-header"><div class="modal-title" id="am-title"></div><div class="modal-sub" id="am-sub"></div></div>
+    <div class="modal-body" id="am-body"></div>
+    <div class="modal-footer"><button class="btn-cancel" onclick="document.getElementById('action-modal').classList.remove('visible')">Cancel</button><button class="btn-finish" id="am-confirm" onclick="document.getElementById('action-modal').classList.remove('visible');showToast('Changes saved')">Confirm</button></div>
+  </div>
+</div>
+
+<!-- ══ ON-CALL NOTIFY MODAL ══ -->
+<div class="modal-overlay" id="oncall-modal">
+  <div class="modal modal-sm">
+    <div class="modal-header"><div class="modal-title">Notify on-call pool</div><div class="modal-sub">Send an alert to available on-call providers. They can accept or decline via the app.</div></div>
+    <div class="modal-body">
+      <div class="field-row"><div class="field-label">Reason / message</div><textarea placeholder="e.g. Thursday gap — need 4 hrs Video coverage from 9am–1pm"></textarea></div>
+      <div class="field-row"><div class="field-label">Specialty needed</div><select><option>Any</option><option>General Practice</option><option>Mental Health</option><option>Cardiology</option></select></div>
+      <div class="field-row"><div class="field-label">Date needed</div><input type="text" value="Thu, Apr 24 2026"></div>
+      <div class="ds-title" style="margin-top:0;">On-call pool status</div>
+      <div class="oncall-pool">
+        <div class="pool-row available"><div style="display:flex;align-items:center;gap:8px;"><div class="pool-status green"></div><div class="av" style="background:#E6F1FB;color:var(--blue);">DL</div><div><div style="font-size:12px;font-weight:500;">Dr. Lee</div><div style="font-size:10px;color:var(--text3);">GP · Available · CA, NY</div></div></div><span class="badge bg-green">Available</span></div>
+        <div class="pool-row busy"><div style="display:flex;align-items:center;gap:8px;"><div class="pool-status amber"></div><div class="av" style="background:var(--pl);color:var(--purple);">GP</div><div><div style="font-size:12px;font-weight:500;">Gennie Provider</div><div style="font-size:10px;color:var(--text3);">Mental Health · On shift till 6pm</div></div></div><span class="badge bg-amber">Busy</span></div>
+        <div class="pool-row available"><div style="display:flex;align-items:center;gap:8px;"><div class="pool-status green"></div><div class="av" style="background:var(--gl);color:#0F6E56;">DS</div><div><div style="font-size:12px;font-weight:500;">Dr. Smith</div><div style="font-size:10px;color:var(--text3);">Cardiology · Available · CA, NY, TX</div></div></div><span class="badge bg-green">Available</span></div>
+        <div class="pool-row available"><div style="display:flex;align-items:center;gap:8px;"><div class="pool-status green"></div><div class="av" style="background:var(--al);color:var(--amber);">DP</div><div><div style="font-size:12px;font-weight:500;">Dr. Patel</div><div style="font-size:10px;color:var(--text3);">GP · Available · CA</div></div></div><span class="badge bg-green">Available</span></div>
+        <div class="pool-row busy"><div style="display:flex;align-items:center;gap:8px;"><div class="pool-status gray"></div><div class="av" style="background:#FCE8E8;color:var(--red);">MK</div><div><div style="font-size:12px;font-weight:500;">Dr. Kim</div><div style="font-size:10px;color:var(--text3);">GP · Off today</div></div></div><span class="badge" style="background:var(--bg);color:var(--text3);">Off</span></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn-cancel" onclick="document.getElementById('oncall-modal').classList.remove('visible')">Cancel</button><button class="btn-amber" onclick="document.getElementById('oncall-modal').classList.remove('visible');showToast('Alert sent to 3 available on-call providers')">Send alert to available (3)</button></div>
+  </div>
+</div>
+
+<div class="success-toast" id="toast"><svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="#4EEDB8" stroke-width="1.2"/><path d="M4.5 7l2 2 3-3" stroke="#4EEDB8" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span id="toast-msg">Saved</span></div>
+
+<script>
+// ══ HELPERS ══
+function showToast(msg){const t=document.getElementById('toast');document.getElementById('toast-msg').textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800);}
+function switchTab(id,el){
+  document.querySelectorAll('.tab-content').forEach(t=>{t.classList.remove('active');t.style.display='none';});
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  const tc=document.getElementById('tab-'+id);
+  tc.style.display=(id==='overview'||id==='providers')?'flex':'block';
+  tc.classList.add('active');
+  if(el){el.classList.add('active');}
+}
+function switchNav(el,tabId){
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  el.classList.add('active');
+  const tabEl=document.getElementById('tab-btn-'+tabId);
+  if(tabEl) switchTab(tabId,tabEl);
+}
+function switchToTab(id){const btn=document.getElementById('tab-btn-'+id);switchTab(id,btn);}
+document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',function(e){if(e.target===this)this.classList.remove('visible');}));
+function openOnCallModal(){document.getElementById('oncall-modal').classList.add('visible');}
+
+// ══ OVERVIEW DATA ══
+const TODAY = new Date(2026,3,23); // Apr 23 2026 Wed
+function getMondayOf(d){const day=new Date(d);const dow=day.getDay();const diff=dow===0?-6:1-dow;day.setDate(day.getDate()+diff);return day;}
+const BASE_MONDAY = getMondayOf(TODAY);
+let weekOffset=0;
+
+const weekData={
+  '0':{stats:{demand:312,supply:278,util:78,waitlist:23},days:[
+    {label:'Mon',date:21,severity:'good',demand:52,supply:61,types:[{t:'Video',c:'#378ADD',d:30,s:36},{t:'In-Person',c:'#1D9E75',d:14,s:16},{t:'Walk-in',c:'#BA7517',d:8,s:9}],blocks:[],providers:[{i:'DL',bg:'#E6F1FB',c:'#185FA5',n:'Dr. Lee',meta:'Available · 8 free hrs · Video',impact:'+16 slots',actions:['Extend template','View schedule']}]},
+    {label:'Tue',date:22,severity:'warn',demand:48,supply:35,types:[{t:'Video',c:'#378ADD',d:28,s:20},{t:'In-Person',c:'#1D9E75',d:12,s:10},{t:'Phone',c:'#534AB7',d:8,s:5}],blocks:[],providers:[{i:'DL',bg:'#E6F1FB',c:'#185FA5',n:'Dr. Lee',meta:'Available Tue · 8 free hrs',impact:'+12 slots',actions:['Extend template','View schedule']},{i:'DP',bg:'#FAEEDA',c:'#BA7517',n:'Dr. Patel',meta:'Available · no template this day',impact:'+10 slots',actions:['Assign template','View schedule']}]},
+    {label:'Wed',date:23,today:true,severity:'good',demand:38,supply:52,types:[{t:'Video',c:'#378ADD',d:22,s:30},{t:'In-Person',c:'#1D9E75',d:10,s:14},{t:'Walk-in',c:'#BA7517',d:6,s:8}],blocks:[{prov:'Dr. Smith',reason:'CME conference',time:'2pm–5pm'}],providers:[]},
+    {label:'Thu',date:24,severity:'crit',demand:72,supply:36,types:[{t:'Video',c:'#378ADD',d:40,s:18},{t:'In-Person',c:'#1D9E75',d:20,s:12},{t:'Phone',c:'#534AB7',d:12,s:6}],blocks:[],providers:[{i:'DS',bg:'#E1F5EE',c:'#0F6E56',n:'Dr. Smith',meta:'Partial availability · 4 hrs free',impact:'+8 slots',actions:['Add slots','View schedule']},{i:'DL',bg:'#E6F1FB',c:'#185FA5',n:'Dr. Lee',meta:'No Thu template assigned',impact:'+12 slots',actions:['Assign template','View schedule']},{i:'GP',bg:'#EEEDFE',c:'#534AB7',n:'Gennie Provider',meta:'Low utilization · can cover Video',impact:'+6 slots',actions:['Extend to Thu','View schedule']}]},
+    {label:'Fri',date:25,severity:'surplus',demand:30,supply:57,types:[{t:'Video',c:'#378ADD',d:18,s:32},{t:'Walk-in',c:'#BA7517',d:6,s:14},{t:'Phone',c:'#534AB7',d:6,s:11}],blocks:[],providers:[]},
+    {label:'Sat',date:26,severity:'off'},{label:'Sun',date:27,severity:'off'},
+  ]},
+};
+
+function getWeek(off){
+  const k=off.toString();
+  if(weekData[k])return weekData[k];
+  const days=[];
+  const mon=new Date(BASE_MONDAY);mon.setDate(BASE_MONDAY.getDate()+off*7);
+  const names=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  for(let i=0;i<7;i++){
+    const d=new Date(mon);d.setDate(mon.getDate()+i);
+    if(i>=5){days.push({label:names[i],date:d.getDate(),severity:'off'});continue;}
+    const demand=28+Math.floor(Math.random()*28),supply=26+Math.floor(Math.random()*30);
+    const diff=supply-demand;
+    const sev=diff<-10?'crit':diff<0?'warn':diff>15?'surplus':'good';
+    days.push({label:names[i],date:d.getDate(),severity:sev,demand,supply,types:[{t:'Video',c:'#378ADD',d:Math.floor(demand*.55),s:Math.floor(supply*.55)},{t:'In-Person',c:'#1D9E75',d:Math.floor(demand*.28),s:Math.floor(supply*.28)},{t:'Walk-in',c:'#BA7517',d:Math.floor(demand*.17),s:Math.floor(supply*.17)}],blocks:[],providers:[]});
+  }
+  const totalD=days.filter(d=>d.severity!='off').reduce((a,d)=>a+(d.demand||0),0);
+  const totalS=days.filter(d=>d.severity!='off').reduce((a,d)=>a+(d.supply||0),0);
+  return{stats:{demand:totalD,supply:totalS,util:Math.round(totalS>0?(Math.min(totalD,totalS)/totalS)*100:0),waitlist:8+Math.floor(Math.random()*20)},days};
+}
+
+function getWeekLabel(off){
+  const start=new Date(BASE_MONDAY);start.setDate(BASE_MONDAY.getDate()+off*7);
+  const end=new Date(start);end.setDate(start.getDate()+6);
+  const m=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return start.getMonth()===end.getMonth()?`${m[start.getMonth()]} ${start.getDate()}–${end.getDate()}, ${start.getFullYear()}`:`${m[start.getMonth()]} ${start.getDate()} – ${m[end.getMonth()]} ${end.getDate()}, ${end.getFullYear()}`;
+}
+
+function isTodayInWeek(off){return off===0;}
+
+function renderStats(w){
+  const gap=w.stats.supply-w.stats.demand;
+  document.getElementById('stats-row').innerHTML=`
+    <div class="stat-card"><div class="sl">Predicted demand</div><div class="sv">${w.stats.demand}</div><div class="ss">appointments needed</div><div class="sd du">8-wk rolling avg</div></div>
+    <div class="stat-card"><div class="sl">Available capacity</div><div class="sv">${w.stats.supply}</div><div class="ss">slots · 18 providers</div><div class="sd ${gap>=0?'du':'dd'}">${gap>=0?'+'+gap+' surplus':gap+' gap'}</div></div>
+    <div class="stat-card"><div class="sl">Utilization</div><div class="sv">${w.stats.util}%</div><div class="ss">${Math.round(w.stats.supply*w.stats.util/100)} of ${w.stats.supply} booked</div><div class="sd du">+4% vs last wk</div></div>
+    <div class="stat-card"><div class="sl">Waitlist</div><div class="sv">${w.stats.waitlist}</div><div class="ss">Avg wait 2.4 days</div><div class="sd dd">+3 new today</div></div>`;
+}
+
+function renderChart(w,off){
+  const grid=document.getElementById('cvd-grid');grid.innerHTML='';
+  const todayInThisWeek=off===0;
+  w.days.forEach((d,i)=>{
+    const div=document.createElement('div');
+    const isTodayDay=todayInThisWeek&&d.today;
+    div.className='cvd-day'+(d.severity==='off'?' off':' '+d.severity)+(isTodayDay?' today-marker':'');
+    if(d.severity!=='off'){
+      const maxH=Math.max(d.demand,d.supply)||1;
+      const dH=Math.round((d.demand/maxH)*100),sH=Math.round((d.supply/maxH)*100);
+      const isGap=d.supply<d.demand;const isSurplus=d.severity==='surplus';
+      const alertStyle=d.severity==='crit'?'background:var(--rl);color:var(--red)':d.severity==='warn'?'background:var(--al);color:var(--amber)':d.severity==='surplus'?'background:var(--bl);color:var(--blue)':'background:var(--gl);color:#0F6E56';
+      const alertText=d.severity==='crit'?'−'+(d.demand-d.supply)+' critical':d.severity==='warn'?'−'+(d.demand-d.supply)+' gap':d.severity==='surplus'?'+'+(d.supply-d.demand)+' surplus':'+'+(d.supply-d.demand)+' OK';
+      const demandBarClass=isSurplus?'bar-surplus':isGap?'bar-over':'bar-demand';
+      div.innerHTML=`<div class="cvd-dname">${d.label}</div><div class="cvd-date">${d.date}${isTodayDay?'<span style="font-size:9px;font-weight:600;color:var(--blue);margin-left:3px;">Today</span>':''}</div><div class="cvd-bar-wrap"><div style="width:47%;display:flex;flex-direction:column;justify-content:flex-end;height:100%;"><div class="cvd-bar ${demandBarClass}" style="height:${dH}%;"></div></div><div style="width:47%;display:flex;flex-direction:column;justify-content:flex-end;height:100%;"><div class="cvd-bar bar-supply" style="height:${sH}%;"></div></div></div><div class="cvd-nums">${d.demand} needed · ${d.supply} slots</div><div class="cvd-alert" style="${alertStyle}">${alertText}</div>${d.blocks&&d.blocks.length>0?`<div style="font-size:8px;color:var(--red);margin-top:3px;">🚫 ${d.blocks.length} block</div>`:''}<div class="click-hint">drill down ↗</div>`;
+      div.onclick=()=>openOvDrawer(d,i);
+    } else {
+      div.innerHTML=`<div class="cvd-dname">${d.label}</div><div class="cvd-date" style="color:var(--text3);">${d.date}</div><div style="font-size:10px;color:var(--text3);margin-top:8px;">No hours</div>`;
+    }
+    grid.appendChild(div);
+  });
+}
+
+function render(){
+  const w=getWeek(weekOffset);
+  document.getElementById('week-label').textContent=getWeekLabel(weekOffset);
+  const tb=document.getElementById('today-btn');
+  if(weekOffset===0){tb.classList.add('current-week');}else{tb.classList.remove('current-week');}
+  renderStats(w);renderChart(w,weekOffset);closeDrawer();
+}
+function changeWeek(d){weekOffset+=d;render();}
+function goToday(){weekOffset=0;render();}
+
+function openOvDrawer(d,idx){
+  document.querySelectorAll('.cvd-day').forEach(e=>e.classList.remove('selected'));
+  document.querySelectorAll('.cvd-day')[idx].classList.add('selected');
+  document.getElementById('ov-main').classList.add('drawer-open');
+  const gap=d.supply-d.demand;
+  const sev=d.severity;
+  const titleColor=sev==='crit'?'var(--red)':sev==='warn'?'var(--amber)':sev==='surplus'?'var(--blue)':'var(--green)';
+  const titleText=sev==='crit'?'Critical gap':sev==='warn'?'Capacity gap':sev==='surplus'?'Surplus capacity':'Sufficient capacity';
+  document.getElementById('drawer-title').textContent=`${d.label} ${d.date} — ${titleText}`;
+  document.getElementById('drawer-title').style.color=titleColor;
+  document.getElementById('drawer-sub').textContent=`${d.demand} needed · ${d.supply} slots · ${gap>=0?'+'+gap:gap}`;
+  let html='';
+
+  // Block-offs
+  if(d.blocks&&d.blocks.length>0){
+    html+=`<div class="ds-title">Provider block-offs</div>`;
+    d.blocks.forEach(b=>{html+=`<div class="block-row"><div><div style="font-weight:500;">${b.prov}</div><div style="font-size:10px;opacity:0.7;">${b.reason} · ${b.time}</div></div><button class="btn-xs" style="background:rgba(255,255,255,0.3);color:var(--red);font-size:10px;" onclick="showToast('Override request sent to Dr. Smith')">Request override</button></div>`;});
+    html+=`<div style="font-size:10px;color:var(--text3);margin-top:4px;margin-bottom:4px;">Block-offs reduce effective supply. These ${d.blocks.length} block${d.blocks.length>1?'s':''} account for some of the capacity reduction shown above.</div>`;
+  }
+
+  // Type breakdown
+  html+=`<div class="ds-title">By visit type</div>`;
+  d.types.forEach(t=>{
+    const g=t.s-t.d;const pct=Math.round((Math.min(t.d,t.s)/Math.max(t.d,t.s,1))*100);
+    html+=`<div class="breakdown-row"><div class="br-left"><div class="br-dot" style="background:${t.c};"></div>${t.t}</div><div class="br-right"><div class="br-nums">${t.d} needed · ${t.s} slots</div><div style="display:flex;align-items:center;gap:4px;margin-top:2px;"><div class="mini-bar-wrap"><div class="mini-bar" style="width:${pct}%;background:${t.c};"></div></div><div class="br-gap ${g>=0?'gap-pos':'gap-neg'}">${g>=0?'+'+g:g}</div></div></div></div>`;
+  });
+
+  // Surplus actions
+  if(sev==='surplus'){
+    html+=`<div class="ds-title">Surplus actions — what to do with extra capacity</div>`;
+    const surplusActions=[
+      {title:'Open to waitlist patients',desc:'Offer available slots to the 23 patients currently on the waitlist.',btn:'Offer slots',action:'Waitlist slots offered — 23 patients notified'},
+      {title:'Enable walk-in window',desc:'Convert surplus scheduled slots into a walk-in window for same-day access.',btn:'Enable walk-in',action:'Walk-in window activated for this day'},
+      {title:'Release to other clinics',desc:'Make slots visible to patients of partner clinics in this region.',btn:'Share capacity',action:'Capacity shared with partner network'},
+      {title:'Reduce provider hours',desc:'If surplus is recurring, consider adjusting the template to reduce oversupply.',btn:'Adjust template',action:'Opening template editor...'},
+    ];
+    surplusActions.forEach(sa=>{
+      html+=`<div class="surplus-card"><div class="surplus-action-title">${sa.title}</div><div class="surplus-action-desc">${sa.desc}</div><button class="btn-xs bxb" onclick="showToast('${sa.action}')">${sa.btn}</button></div>`;
+    });
+  } else if(gap<0&&d.providers&&d.providers.length>0){
+    html+=`<div class="ds-title">Suggested actions · ${d.providers.length} provider${d.providers.length>1?'s':''} available</div>`;
+    d.providers.forEach(p=>{
+      html+=`<div class="action-card"><div class="ac-provider"><div class="av" style="background:${p.bg};color:${p.c};">${p.i}</div><div class="ac-name">${p.n}</div></div><div class="ac-meta">${p.meta}</div><div class="ac-impact">${p.impact}</div><div class="ac-actions">${p.actions.map((a,ai)=>`<button class="btn-xs ${ai===0?'bxg':'bxb'}" onclick="openActionModal('${a}','${p.n}','${d.label} ${d.date}')">${a}</button>`).join('')}</div></div>`;
+    });
+    html+=`<div style="margin-top:10px;"><button class="btn-amber" style="font-size:11px;padding:5px 12px;border-radius:var(--r);cursor:pointer;border:none;font-family:inherit;" onclick="openOnCallModal()">📣 Notify on-call pool</button></div>`;
+  } else if(gap>=0&&sev!=='surplus'){
+    html+=`<div class="ds-title">Actions</div><div style="font-size:12px;color:var(--text3);padding:6px 0;">Capacity is sufficient for this day.</div>`;
+  }
+
+  document.getElementById('drawer-body').innerHTML=html;
+}
+function closeDrawer(){document.getElementById('ov-main').classList.remove('drawer-open');document.querySelectorAll('.cvd-day').forEach(e=>e.classList.remove('selected'));}
+
+// ══ ACTION MODAL ══
+const actionCfgs={
+  'Extend template':{title:'Extend template hours',sub:'Add more hours to this provider\'s existing template for the selected day.',body:`<div class="field-row"><div class="field-label">Provider</div><input id="af-p" type="text" readonly></div><div class="field-row"><div class="field-label">Day</div><input id="af-d" type="text" readonly></div><div class="half"><div class="field-row"><div class="field-label">Extend from</div><select><option>5:00 PM</option><option>6:00 PM</option><option>7:00 PM</option></select></div><div class="field-row"><div class="field-label">Extend to</div><select><option>7:00 PM</option><option>8:00 PM</option><option>9:00 PM</option></select></div></div><div class="field-row"><div class="field-label">Visit type</div><select><option>Same as template (Video)</option><option>Phone</option></select></div>`,confirm:'Extend hours'},
+  'Assign template':{title:'Assign template to provider',sub:'Apply a template to cover this provider on the selected day.',body:`<div class="field-row"><div class="field-label">Provider</div><input id="af-p" type="text" readonly></div><div class="field-row"><div class="field-label">Day</div><input id="af-d" type="text" readonly></div><div class="field-row"><div class="field-label">Select template</div><select><option>Standard Video (1:1) — Mon–Fri 9am–5pm 30min</option><option>In-Person Clinic — Tue & Thu 8am–12pm 20min</option><option>Walk-in Window — Daily 6–9pm</option><option>Video Group (up to 8) — Wed 3–5pm</option></select></div><div class="field-row"><div class="field-label">Recurrence</div><select><option>This day only</option><option>Every week on this day</option><option>Next 4 weeks</option></select></div><div class="field-row"><div class="field-label">Shift</div><select><option>Morning (6am–2pm)</option><option>Afternoon (2pm–10pm)</option><option>Evening (10pm–6am)</option></select></div>`,confirm:'Assign template'},
+  'Add slots':{title:'Add one-off slots',sub:'Manually create specific slots for this provider.',body:`<div class="field-row"><div class="field-label">Provider</div><input id="af-p" type="text" readonly></div><div class="field-row"><div class="field-label">Day</div><input id="af-d" type="text" readonly></div><div class="half"><div class="field-row"><div class="field-label">Start</div><select><option>8:00 AM</option><option>9:00 AM</option><option>2:00 PM</option></select></div><div class="field-row"><div class="field-label">End</div><select><option>12:00 PM</option><option>5:00 PM</option><option>6:00 PM</option></select></div></div><div class="half"><div class="field-row"><div class="field-label">Visit type</div><select><option>Video (1:1)</option><option>In-Person</option><option>Phone</option></select></div><div class="field-row"><div class="field-label">Duration</div><select><option>20 min</option><option>30 min</option><option>45 min</option></select></div></div>`,confirm:'Add slots'},
+  'Extend to Thu':{title:'Extend provider to Thursday',sub:'Add Thursday coverage using an existing template.',body:`<div class="field-row"><div class="field-label">Provider</div><input id="af-p" type="text" readonly></div><div class="field-row"><div class="field-label">Template</div><select><option>Standard Video (1:1)</option><option>Walk-in Window</option></select></div><div class="half"><div class="field-row"><div class="field-label">Start</div><select><option>9:00 AM</option><option>10:00 AM</option></select></div><div class="field-row"><div class="field-label">End</div><select><option>5:00 PM</option><option>3:00 PM</option></select></div></div><div class="field-row"><div class="field-label">Recurrence</div><select><option>Every Thursday</option><option>This Thursday only</option></select></div>`,confirm:'Confirm extension'},
+  'View schedule':{title:'Provider weekly schedule',sub:'Current week overview including templates, block-offs, and utilization.',body:`<div class="field-row"><div class="field-label">Provider</div><input id="af-p" type="text" readonly></div><div class="ds-title" style="margin-top:0;">This week schedule</div><div class="mini-schedule"><div class="ms-day"><div class="ms-day-name">Mon</div><div class="ms-slot" style="background:var(--bl);color:var(--blue);">9a–5p Video</div></div><div class="ms-day"><div class="ms-day-name">Tue</div><div class="ms-slot" style="background:var(--bl);color:var(--blue);">9a–5p Video</div></div><div class="ms-day"><div class="ms-day-name">Wed</div><div class="ms-slot" style="background:var(--bl);color:var(--blue);">9a–2p Video</div><div class="ms-slot" style="background:var(--rl);color:var(--red);">2p–5p 🚫 Block</div></div><div class="ms-day"><div class="ms-day-name">Thu</div><div style="font-size:9px;color:var(--text3);">No template</div></div><div class="ms-day"><div class="ms-day-name">Fri</div><div class="ms-slot" style="background:var(--bl);color:var(--blue);">9a–5p Video</div><div class="ms-slot" style="background:var(--al);color:var(--amber);">6p–9p Walk-in</div></div></div><div class="ds-title">Utilization trend</div><div style="display:flex;gap:4px;align-items:flex-end;margin-bottom:8px;"><div style="flex:1;background:var(--green);height:28px;border-radius:2px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:2px;font-size:8px;color:#fff;font-weight:600;">82%</div><div style="flex:1;background:var(--green);height:32px;border-radius:2px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:2px;font-size:8px;color:#fff;font-weight:600;">87%</div><div style="flex:1;background:var(--amber);height:22px;border-radius:2px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:2px;font-size:8px;color:#fff;font-weight:600;">71%</div><div style="flex:1;background:var(--green);height:36px;border-radius:2px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:2px;font-size:8px;color:#fff;font-weight:600;">92%</div><div style="flex:1;background:var(--green);height:30px;border-radius:2px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:2px;font-size:8px;color:#fff;font-weight:600;">85%</div></div><div style="display:flex;gap:4px;"><div style="flex:1;font-size:9px;color:var(--text3);text-align:center;">W-4</div><div style="flex:1;font-size:9px;color:var(--text3);text-align:center;">W-3</div><div style="flex:1;font-size:9px;color:var(--text3);text-align:center;">W-2</div><div style="flex:1;font-size:9px;color:var(--text3);text-align:center;">W-1</div><div style="flex:1;font-size:9px;color:var(--text3);text-align:center;">Now</div></div><div class="ds-title">Block-offs this week</div><div class="block-row"><div><div style="font-weight:500;">Wed 2pm–5pm</div><div style="font-size:10px;opacity:0.7;">CME conference</div></div><button class="btn-xs" style="background:rgba(255,255,255,0.3);color:var(--red);font-size:10px;" onclick="showToast('Override request sent')">Override</button></div><div class="ds-title">Insurance &amp; licensing</div><div style="font-size:11px;color:var(--text2);line-height:1.6;">Licensed: CA, NY · Insurance: Blue Cross, Aetna, UHC<br>Credentialing expires: Dec 2026</div>`,confirm:'Go to provider page'},
+};
+
+function openActionModal(action,provider,day){
+  const cfg=actionCfgs[action]||{title:action,sub:'',body:'',confirm:'Confirm'};
+  document.getElementById('am-title').textContent=cfg.title;
+  document.getElementById('am-sub').textContent=cfg.sub+(provider?` · ${provider}`:'');
+  document.getElementById('am-body').innerHTML=cfg.body;
+  document.getElementById('am-confirm').textContent=cfg.confirm;
+  if(document.getElementById('af-p'))document.getElementById('af-p').value=provider||'';
+  if(document.getElementById('af-d'))document.getElementById('af-d').value=day||'';
+  document.getElementById('action-modal').classList.add('visible');
+}
+
+// ══ TEMPLATES ══
+const templates=[
+  {id:0,name:'Standard Video (1:1)',type:'Video',badge:'bg-blue',days:'Mon–Fri',hours:'9am–5pm',shift:'Morning',duration:'30 min',buffer:'5 min',recurrence:'Weekly',selfBook:true,locations:['Virtual'],states:['CA','NY'],insurance:'All credentialed',providers:['Dr. Lee','Dr. Patel'],slotsPerDay:16,totalPerWeek:128,specialty:'General Practice'},
+  {id:1,name:'In-Person Clinic',type:'In-Person',badge:'bg-green',days:'Tue & Thu',hours:'8am–12pm',shift:'Morning',duration:'20 min',buffer:'5 min',recurrence:'Weekly',selfBook:false,locations:['North Clinic — Rm 1','South Clinic — Rm A'],states:['N/A'],insurance:'All credentialed',providers:['Dr. Smith'],slotsPerDay:12,totalPerWeek:48,specialty:'Cardiology'},
+  {id:2,name:'Walk-in / On-call Window',type:'Walk-in',badge:'bg-amber',days:'Daily',hours:'6pm–9pm',shift:'Evening',duration:'Open',buffer:'—',recurrence:'Weekly',selfBook:false,locations:['Virtual'],states:['CA','NY','TX'],insurance:'All plans',providers:['Dr. Lee','Dr. Patel','Dr. Kim'],slotsPerDay:'N/A',totalPerWeek:'6 windows',specialty:'All'},
+  {id:3,name:'Video Group (up to 8)',type:'Video Group',badge:'bg-purple',days:'Wed',hours:'3pm–5pm',shift:'Afternoon',duration:'60 min',buffer:'10 min',recurrence:'Weekly',selfBook:true,locations:['Virtual'],states:['CA'],insurance:'Aetna, Cigna',providers:['Gennie Provider'],slotsPerDay:2,totalPerWeek:4,specialty:'Mental Health'},
+];
+let activeTemplate=0;
+
+function renderTemplateList(){
+  document.getElementById('tmpl-list').innerHTML=templates.map((t,i)=>`
+    <div class="tmpl-item ${i===activeTemplate?'active':''}" onclick="selectTemplate(${i})">
+      <div style="display:flex;align-items:center;justify-content:space-between;"><span class="badge ${t.badge}" style="font-size:9px;">${t.type}</span><span style="font-size:9px;color:var(--text3);">${t.specialty}</span></div>
+      <div class="tmpl-item-name">${t.name}</div>
+      <div class="tmpl-item-desc">${t.days} · ${t.hours} · ${t.shift} shift</div>
+      <div class="tmpl-providers-count">Assigned to <span>${t.providers.length} provider${t.providers.length>1?'s':''}</span> · <span>${typeof t.totalPerWeek==='number'?t.totalPerWeek+' slots/wk':t.totalPerWeek}</span></div>
+    </div>`).join('');
+}
+
+function renderTemplateDetail(idx){
+  const t=templates[idx];
+  const dayLetters=['M','T','W','T','F','S','S'];
+  const activeDays=t.days==='Mon–Fri'?[0,1,2,3,4]:t.days==='Tue & Thu'?[1,3]:t.days==='Wed'?[2]:[0,1,2,3,4,5,6];
+  const dayPills=dayLetters.map((d,i)=>`<div class="day-pill ${activeDays.includes(i)?'on':''}">${d}</div>`).join('');
+  const provData={'Dr. Lee':{i:'DL',bg:'#E6F1FB',c:'#185FA5',spec:'GP',util:'87%',states:'CA,NY'},'Dr. Patel':{i:'DP',bg:'#FAEEDA',c:'#BA7517',spec:'GP',util:'67%',states:'CA'},'Dr. Smith':{i:'DS',bg:'#E1F5EE',c:'#0F6E56',spec:'Cardiology',util:'94%',states:'CA,NY,TX'},'Gennie Provider':{i:'GP',bg:'#EEEDFE',c:'#534AB7',spec:'MH',util:'63%',states:'CA'},'Dr. Kim':{i:'MK',bg:'#FCE8E8',c:'#A32D2D',spec:'GP',util:'—',states:'CA,FL'}};
+
+  document.getElementById('tmpl-detail').innerHTML=`
+    <div class="tmpl-detail-header">
+      <div style="flex:1;"><div class="tdh-name">${t.name}</div><div class="tdh-meta"><span class="badge ${t.badge}">${t.type}</span><span class="badge" style="background:var(--bg);color:var(--text2);border:1px solid var(--border);">${t.specialty}</span><span class="badge" style="background:var(--bg);color:var(--text2);border:1px solid var(--border);">${t.shift} shift</span></div></div>
+      <div style="display:flex;gap:5px;"><button class="btn btn-ghost" onclick="document.getElementById('assign-modal').querySelector('#assign-modal-title').textContent='Assign providers — ${t.name}';document.getElementById('assign-modal').classList.add('visible');">Assign providers</button><button class="btn btn-primary" onclick="openEditTemplateModal(${idx})">Edit template</button></div>
+    </div>
+    <div class="tmpl-detail-body">
+      <div class="tdb-left">
+        <div class="tdb-title">Schedule</div>
+        <div class="config-row"><span class="config-label">Active days</span><div class="day-pills">${dayPills}</div></div>
+        <div class="config-row"><span class="config-label">Hours</span><span class="config-val">${t.hours}</span></div>
+        <div class="config-row"><span class="config-label">Shift</span><span class="config-val">${t.shift}</span></div>
+        <div class="config-row"><span class="config-label">Slot duration</span><span class="config-val">${t.duration}</span></div>
+        <div class="config-row"><span class="config-label">Buffer</span><span class="config-val">${t.buffer}</span></div>
+        <div class="config-row"><span class="config-label">Recurrence</span><span class="config-val">${t.recurrence}</span></div>
+        <div class="config-row"><span class="config-label">Self-booking</span><span class="config-val">${t.selfBook?'Enabled':'Disabled'}</span></div>
+        <div class="tdb-title">Location(s)</div>
+        ${t.locations.map(l=>`<div style="margin-bottom:4px;"><span class="loc-tag"><svg width="9" height="9" viewBox="0 0 12 12" fill="none"><path d="M6 1C4.07 1 2.5 2.57 2.5 4.5c0 2.625 3.5 6.5 3.5 6.5s3.5-3.875 3.5-6.5C9.5 2.57 7.93 1 6 1z" stroke="currentColor" stroke-width="1.1"/><circle cx="6" cy="4.5" r="1" fill="currentColor"/></svg>${l}</span></div>`).join('')}
+        <div class="tdb-title">Rules</div>
+        <div class="config-row"><span class="config-label">Licensed states</span><span class="config-val">${t.states.join(', ')}</span></div>
+        <div class="config-row"><span class="config-label">Insurance</span><span class="config-val">${t.insurance}</span></div>
+        <div class="config-row"><span class="config-label">Referral</span><span class="config-val">No</span></div>
+      </div>
+      <div class="tdb-right">
+        <div class="tdb-title" style="display:flex;justify-content:space-between;align-items:center;">Assigned providers <button class="btn-xs bxg" onclick="document.getElementById('assign-modal').classList.add('visible')">+ Assign</button></div>
+        ${t.providers.map(p=>{const pd=provData[p]||{i:p[0],bg:'#eee',c:'#666',spec:'—',util:'—',states:'—'};return`<div class="pa-row assigned"><div class="pa-left"><div class="av" style="background:${pd.bg};color:${pd.c};">${pd.i}</div><div><div style="font-size:12px;font-weight:500;">${p}</div><div style="font-size:10px;color:var(--text3);">${pd.spec} · ${pd.util} · ${pd.states}</div></div></div><div class="pa-right"><span class="badge bg-green" style="font-size:9px;">Active</span><button class="toggle on" onclick="this.classList.toggle('on');this.classList.toggle('off');event.stopPropagation();"></button></div></div>`;}).join('')}
+        <div class="tdb-title" style="margin-top:12px;">Output</div>
+        <div class="config-row"><span class="config-label">Slots per day</span><span class="config-val" style="color:var(--green);font-weight:600;">${t.slotsPerDay}</span></div>
+        <div class="config-row"><span class="config-label">Total per week</span><span class="config-val" style="color:var(--green);font-weight:600;">${t.totalPerWeek}</span></div>
+        <div class="config-row"><span class="config-label">Providers</span><span class="config-val">${t.providers.length}</span></div>
+      </div>
+    </div>`;
+}
+function selectTemplate(idx){activeTemplate=idx;renderTemplateList();renderTemplateDetail(idx);}
+
+// Edit template — opens wizard pre-filled
+function openEditTemplateModal(idx){
+  wStep=0;updateWizard();
+  document.getElementById('new-tmpl-modal').classList.add('visible');
+  const t=templates[idx];
+  setTimeout(()=>{const ni=document.getElementById('w-tmpl-name');if(ni)ni.value=t.name;},50);
+  showToast('Template loaded for editing');
+}
+
+// ══ WIZARD ══
+let wStep=0;const wTotal=5;
+const wLabels=['Visit type','Schedule','Rules','Providers','Review'];
+function openNewTemplateModal(){wStep=0;updateWizard();document.getElementById('new-tmpl-modal').classList.add('visible');}
+function wNext(){if(wStep<wTotal-1){wStep++;updateWizard();}}
+function wBack(){if(wStep>0){wStep--;updateWizard();}}
+function updateWizard(){
+  for(let i=0;i<wTotal;i++){
+    const p=document.getElementById('wpane-'+i);if(p)p.classList.toggle('active',i===wStep);
+  }
+  // stepper
+  const s=document.getElementById('wizard-stepper');
+  s.innerHTML=wLabels.map((l,i)=>`<div class="step-item ${i<wStep?'done':i===wStep?'active':''}"><div class="step-num">${i<wStep?'✓':(i+1)}</div><div class="step-lbl">${l}</div></div>${i<wTotal-1?`<div class="step-line ${i<wStep?'done':''}"></div>`:''}`).join('');
+  document.getElementById('w-indicator').textContent=`Step ${wStep+1} of ${wTotal}`;
+  document.getElementById('w-back').style.display=wStep>0?'inline-flex':'none';
+  document.getElementById('w-next').style.display=wStep<wTotal-1?'inline-flex':'none';
+  document.getElementById('w-finish').style.display=wStep===wTotal-1?'inline-flex':'none';
+  // update review
+  if(wStep===4){
+    const ni=document.getElementById('w-tmpl-name');
+    const ti=document.querySelector('.type-btn.selected');
+    const provs=[...document.querySelectorAll('#wpane-3 .pp-row.selected')].map(r=>r.querySelector('div div:first-child').textContent);
+    document.getElementById('w-sum-name').textContent=ni&&ni.value?ni.value:'(untitled)';
+    document.getElementById('w-sum-type').textContent=ti?ti.dataset.type:'Video';
+    document.getElementById('w-sum-providers').textContent=provs.length>0?provs.join(', '):'None';
+  }
+}
+function wSelectType(btn){document.querySelectorAll('.type-btn').forEach(b=>b.classList.remove('selected'));btn.classList.add('selected');const isIP=btn.dataset.type==='In-Person';const locSec=document.getElementById('w-location-section');if(locSec)locSec.style.display=isIP?'block':'none';const sRow=document.getElementById('w-session-row');if(sRow)sRow.style.display=btn.dataset.type==='Video'?'block':'none';const stRow=document.getElementById('w-state-row');if(stRow)stRow.style.display=(btn.dataset.type==='Video'||btn.dataset.type==='Phone')?'block':'none';}
+function finishTemplate(){document.getElementById('new-tmpl-modal').classList.remove('visible');showToast('Template created — publishing on next cycle');}
+
+// ══ PROVIDERS ══
+const providers=[
+  {i:'DL',bg:'#E6F1FB',c:var_blue='#185FA5',name:'Dr. Lee',spec:'General Practice',specKey:'gp',template:'Standard Video',states:['CA','NY'],insurance:['Blue Cross','Aetna','UHC'],shift:'Morning',thisWeek:'15 slots · 13 booked',util:87,walkin:true,locations:['Virtual']},
+  {i:'GP',bg:var_pl='#EEEDFE',c:var_purple='#534AB7',name:'Gennie Provider',spec:'Mental Health',specKey:'mh',template:'Group Video',states:['CA'],insurance:['Aetna','Cigna'],shift:'Afternoon',thisWeek:'8 slots · 5 booked',util:63,walkin:false,locations:['Virtual']},
+  {i:'DS',bg:var_gl='#E1F5EE',c:var_gc='#0F6E56',name:'Dr. Smith',spec:'Cardiology',specKey:'cardio',template:'In-Person Clinic',states:['CA','NY','TX'],insurance:['Medicare','Blue Cross','Humana'],shift:'Morning',thisWeek:'18 slots · 17 booked',util:94,walkin:false,locations:['North Clinic','South Clinic']},
+  {i:'DP',bg:var_al='#FAEEDA',c:var_amber='#BA7517',name:'Dr. Patel',spec:'General Practice',specKey:'gp',template:'Standard Video',states:['CA'],insurance:['Blue Cross','Aetna'],shift:'Afternoon',thisWeek:'12 slots · 8 booked',util:67,walkin:true,locations:['Virtual']},
+  {i:'MK',bg:'#FCE8E8',c:var_red='#A32D2D',name:'Dr. Kim',spec:'General Practice',specKey:'gp',template:'None assigned',states:['CA','FL'],insurance:['—'],shift:'—',thisWeek:'0 slots',util:0,walkin:false,locations:['Virtual']},
+];
+
+let activeSpec='all';
+function filterSpec(el,spec){document.querySelectorAll('.spec-pill').forEach(p=>p.classList.remove('active'));el.classList.add('active');activeSpec=spec;renderProviderTable();}
+
+function renderProviderTable(){
+  const filtered=providers.filter(p=>activeSpec==='all'||p.specKey===activeSpec);
+  document.getElementById('provider-tbody').innerHTML=filtered.map(p=>`
+    <tr class="clickable" onclick="openProvDrawer('${p.name}')">
+      <td><div class="pnc"><div class="av" style="background:${p.bg};color:${p.c};">${p.i}</div><div><div class="pn">${p.name}</div><div class="psp">${p.locations.join(', ')}</div></div></div></td>
+      <td><span style="font-size:12px;">${p.spec}</span></td>
+      <td><span class="badge ${p.template==='None assigned'?'bg-red':p.specKey==='mh'?'bg-purple':p.specKey==='cardio'?'bg-green':'bg-blue'}" style="font-size:9px;">${p.template}</span></td>
+      <td><div class="state-pills">${p.states.map(s=>`<span class="state-pill">${s}</span>`).join('')}</div></td>
+      <td><div style="font-size:10px;color:var(--text2);">${p.insurance.join(', ')}</div></td>
+      <td><span class="badge" style="background:var(--bg);border:1px solid var(--border);color:var(--text2);font-size:9px;">${p.shift}</span></td>
+      <td><div style="font-size:11px;">${p.thisWeek}</div></td>
+      <td><div class="util-cell"><div class="util-bar-wrap"><div class="util-bar" style="width:${p.util}%;background:${p.util>=80?'var(--green)':p.util>=60?'var(--amber)':'var(--red)'};"></div></div><span style="font-size:11px;font-weight:600;color:${p.util>=80?'var(--green)':p.util>=60?'var(--amber)':'var(--red)'};">${p.util}%</span></div></td>
+      <td><span class="badge ${p.walkin?'bg-green':'bg-red'}" style="font-size:9px;">${p.walkin?'On':'Off'}</span></td>
+    </tr>`).join('');
+}
+
+function openProvDrawer(name){
+  const p=providers.find(pr=>pr.name===name);if(!p)return;
+  document.getElementById('prov-drawer-main').classList.add('drawer-open');
+  document.getElementById('prov-drawer-title').textContent=p.name;
+  document.getElementById('prov-drawer-sub').textContent=`${p.spec} · ${p.shift} shift`;
+
+  const shiftData={Morning:{start:9,end:14,color:'var(--blue)'},Afternoon:{start:14,end:20,color:'var(--purple)'},Evening:{start:20,end:24,color:'var(--text)'}};
+  const sd=shiftData[p.shift]||{start:9,end:17,color:'var(--green)'};
+  const shiftPct=Math.round(((sd.end-sd.start)/24)*100);
+  const shiftLeft=Math.round((sd.start/24)*100);
+
+  document.getElementById('prov-drawer-body').innerHTML=`
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <div class="av" style="width:44px;height:44px;font-size:16px;background:${p.bg};color:${p.c};">${p.i}</div>
+      <div>
+        <div style="font-size:14px;font-weight:600;">${p.name}</div>
+        <div style="font-size:11px;color:var(--text3);">${p.spec} · ${p.locations.join(', ')}</div>
+        <div style="display:flex;gap:4px;margin-top:4px;">${p.states.map(s=>`<span class="state-pill">${s}</span>`).join('')}</div>
+      </div>
+    </div>
+
+    <div class="ds-title">Shift pattern</div>
+    <div class="shift-row">
+      <div class="shift-label">${p.shift}</div>
+      <div class="shift-bar"><div class="shift-fill" style="width:${shiftPct}%;margin-left:${shiftLeft}%;background:${sd.color};">${sd.start>11?sd.start-12+'pm':(sd.start==12?'12pm':sd.start+'am')} – ${sd.end>12?sd.end-12+'pm':'12pm'}</div></div>
+    </div>
+
+    <div class="ds-title">This week</div>
+    <div class="mini-schedule" id="prov-mini-sched">
+      <div class="ms-day"><div class="ms-day-name">Mon</div><div class="ms-slot" style="background:var(--bl);color:var(--blue);font-size:9px;">9a–5p</div></div>
+      <div class="ms-day"><div class="ms-day-name">Tue</div><div class="ms-slot" style="background:var(--bl);color:var(--blue);font-size:9px;">9a–5p</div></div>
+      <div class="ms-day"><div class="ms-day-name">Wed</div><div class="ms-slot" style="background:var(--bl);color:var(--blue);font-size:9px;">9a–2p</div><div class="ms-slot" style="background:var(--rl);color:var(--red);font-size:9px;">🚫 Block</div></div>
+      <div class="ms-day"><div class="ms-day-name">Thu</div><div style="font-size:9px;color:var(--text3);">—</div></div>
+      <div class="ms-day"><div class="ms-day-name">Fri</div><div class="ms-slot" style="background:var(--bl);color:var(--blue);font-size:9px;">9a–5p</div><div class="ms-slot" style="background:var(--al);color:var(--amber);font-size:9px;">Walk-in</div></div>
+    </div>
+
+    <div class="ds-title">Block-offs</div>
+    <div class="block-row"><div><div style="font-weight:500;">Wed Apr 23 · 2pm–5pm</div><div style="font-size:10px;opacity:0.7;">CME conference · Provider submitted</div></div><button class="btn-xs" style="background:rgba(255,255,255,0.3);color:var(--red);font-size:10px;" onclick="showToast('Override request sent')">Override</button></div>
+
+    <div class="ds-title">Utilization trend (5 wks)</div>
+    <div style="display:flex;gap:3px;align-items:flex-end;margin-bottom:4px;">
+      ${[82,87,71,92,p.util].map((u,i)=>`<div style="flex:1;height:${Math.round(u*0.4)}px;background:${u>=80?'var(--green)':u>=60?'var(--amber)':'var(--red)'};border-radius:2px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:2px;"><span style="font-size:8px;color:#fff;font-weight:600;">${u}%</span></div>`).join('')}
+    </div>
+    <div style="display:flex;gap:3px;">${['W-4','W-3','W-2','W-1','Now'].map(w=>`<div style="flex:1;font-size:9px;color:var(--text3);text-align:center;">${w}</div>`).join('')}</div>
+
+    <div class="ds-title">Insurance &amp; credentialing</div>
+    <div style="font-size:11px;color:var(--text2);line-height:1.7;">${p.insurance.map(ins=>`<span class="ins-tag">${ins}</span>`).join('')}</div>
+    <div style="font-size:10px;color:var(--text3);margin-top:4px;">Credentialing expires: Dec 2026</div>
+
+    <div class="ds-title">Actions</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;">
+      <button class="btn-xs bxg" onclick="openActionModal('Assign template','${p.name}','')">Assign template</button>
+      <button class="btn-xs bxb" onclick="openActionModal('Extend template','${p.name}','')">Extend hours</button>
+      <button class="btn-xs bxo" onclick="showToast('Block-off form opened for ${p.name}')">Add block-off</button>
+      <button class="btn-xs" style="background:var(--bg);border:1px solid var(--border);color:var(--text2);" onclick="showToast('Opening full provider profile...')">Full profile →</button>
+    </div>`;
+}
+function closeProvDrawer(){document.getElementById('prov-drawer-main').classList.remove('drawer-open');}
+
+// ══ WAITLIST ══
+function renderWaitlist(){
+  const wlData=[
+    {i:'RP',bg:var_bl2='#E6F1FB',c:'#185FA5',name:'Raj Patel',meta:'Video · Any provider · 5 days',reason:'No slots when booked',insurance:'Aetna',state:'CA',status:'available'},
+    {i:'JM',bg:'#E1F5EE',c:'#0F6E56',name:'James Miller',meta:'Video · Dr. Lee · 3 days',reason:'Provider fully booked',insurance:'Blue Cross',state:'NY',status:'available'},
+    {i:'AL',bg:'#EEEDFE',c:'#534AB7',name:'Amy Liu',meta:'Group Video · Gennie Provider · 2 days',reason:'Group session full',insurance:'Cigna',state:'CA',status:'available'},
+    {i:'SC',bg:'#FAEEDA',c:'#BA7517',name:'Sarah Chen',meta:'In-Person · Dr. Smith · 1 day',reason:'No slots when booked',insurance:'Medicare',state:'CA',status:'none'},
+  ];
+  document.getElementById('waitlist-body').innerHTML=wlData.map(w=>`
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);gap:12px;">
+      <div style="display:flex;align-items:flex-start;gap:8px;">
+        <div class="av" style="background:${w.bg};color:${w.c};font-size:9px;">${w.i}</div>
+        <div>
+          <div style="font-size:12px;font-weight:500;">${w.name}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:1px;">${w.meta}</div>
+          <div style="display:flex;gap:4px;margin-top:4px;">
+            <span style="font-size:10px;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:1px 6px;color:var(--text2);">${w.reason}</span>
+            <span class="ins-tag">${w.insurance}</span>
+            <span class="state-pill">${w.state}</span>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+        <span class="badge ${w.status==='available'?'bg-green':'bg-amber'}">${w.status==='available'?'Slot available':'No slots yet'}</span>
+        <button class="btn-xs bxg" ${w.status!=='available'?'style="opacity:.4;cursor:not-allowed;" disabled':''} onclick="showToast('Slot offered to ${w.name} · notification sent')">Offer slot →</button>
+        <button class="btn-xs bxr" onclick="showToast('${w.name} removed from waitlist')">Remove</button>
+      </div>
+    </div>`).join('');
+}
+
+// ══ INIT ══
+document.querySelectorAll('.tab-content').forEach(t=>t.style.display='none');
+document.getElementById('tab-overview').style.display='flex';
+document.getElementById('tab-overview').classList.add('active');
+document.getElementById('tab-providers').style.display='flex';
+renderTemplateList();renderTemplateDetail(0);renderProviderTable();renderWaitlist();render();
+// reset providers tab display
+document.getElementById('tab-providers').style.display='none';
+</script>
+</body>
+</html>
